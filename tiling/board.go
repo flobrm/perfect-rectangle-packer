@@ -19,30 +19,7 @@ func NewBoard(boardDims Coord, tiles []Tile) Board {
 }
 
 func (b *Board) addCandidate(newCand Coord) {
-	if len(b.Candidates) == 0 {
-		b.Candidates = append(b.Candidates, newCand)
-		return
-	}
-
-	added := false
-	for i := len(b.Candidates) - 1; i >= 0; i-- {
-		candidate := b.Candidates[i]
-		if (newCand.Y < candidate.Y) ||
-			(newCand.Y == candidate.Y && newCand.X < candidate.X) {
-			// temp := append(b.Candidates[:i+1], newCand)
-
-			b.Candidates = append(b.Candidates[:Min(len(b.Candidates), i+2)], b.Candidates[Min(len(b.Candidates)-1, i+1):]...)
-			b.Candidates[i+1] = newCand
-			// last := b.Candidates[i+1:] //b.Candidates[Min(len(b.Candidates), i+2):]...
-			// b.Candidates = append(b.Candidates[:i+1], newCand)
-			// b.Candidates = append(b.Candidates[:], last...)
-			added = true
-			break
-		}
-	}
-	if !added { //All the other candidates were smaller
-		b.Candidates = append([]Coord{newCand}, b.Candidates[:]...)
-	}
+	b.Candidates = append(b.Candidates, newCand)
 }
 
 //Min returns the min of two integers, why the fuck do I have to define this
@@ -152,33 +129,45 @@ func (b Board) posCollides(pos Coord) (collides bool, collider *Tile) {
 //RemoveLastTile removes a tile and resets it's candidate positions
 func (b *Board) RemoveLastTile() *Tile {
 	tile := *b.Tiles[len(b.Tiles)-1]
-	tile.Remove()
 	b.removeCandidates(tile)
 	b.addCandidate(Coord{tile.X, tile.Y})
+	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
 
 	return &tile
 }
 
 func (b *Board) removeCandidates(tile Tile) {
-
-	toRemove := tile.GetNeighborSpots()
-
-	//remove top if it exists
-	for i, cand := range b.Candidates {
-		if cand.X == toRemove[1].X && cand.Y == toRemove[1].Y {
-			b.Candidates = append(b.Candidates[:i], b.Candidates[Min(len(b.Candidates), i+1):]...)
-			break //assume only one occurance
+	if len(b.Candidates) == 0 {
+		return
+	}
+	cand := b.Candidates[len(b.Candidates)-1]
+	if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
+		b.Candidates = b.Candidates[:len(b.Candidates)-1]
+		if len(b.Candidates) == 0 {
+			return
+		}
+		cand = b.Candidates[len(b.Candidates)-1]
+		if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
+			b.Candidates = b.Candidates[:len(b.Candidates)-1]
 		}
 	}
+}
 
-	//remove right spot if it exists
-	for i, cand := range b.Candidates {
-		if cand.X == toRemove[0].X { //only check same column, row is different
-			if cand.Y >= tile.Y && cand.Y < tile.Y+tile.CurH {
-				b.Candidates = append(b.Candidates[:i], b.Candidates[Min(len(b.Candidates), i+1):]...)
-				break //assume only one occurance
-			}
+func isRightCandidate(cand Coord, tile Tile) bool {
+	if cand.X == tile.X+tile.CurW {
+		if cand.Y >= tile.Y && cand.Y < tile.Y+tile.CurH {
+			return true
 		}
 	}
+	return false
+}
+
+func isTopCandidate(cand Coord, tile Tile) bool {
+	if cand.Y == tile.Y+tile.CurH {
+		if cand.X >= tile.X && cand.X < tile.X+tile.CurW {
+			return true
+		}
+	}
+	return false
 }

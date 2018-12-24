@@ -2,9 +2,10 @@ package tiling
 
 //Board stores the board and everything placed on it
 type Board struct {
-	Size       Coord     //width and hight of the board
-	Tiles      [](*Tile) //All the placed tiles
-	Candidates []Coord   //Candidate positions for next placement
+	Size          Coord     //width and hight of the board
+	Tiles         [](*Tile) //All the placed tiles
+	Candidates    []Coord   //Candidate positions for next placement
+	lastCollision *Tile
 }
 
 //NewBoard inits a board, including candidates
@@ -31,18 +32,27 @@ func Min(a, b int) int {
 }
 
 //Fits checks if a tile fits the board at the next position to fill
-func (b Board) Fits(tile Tile, turned bool) bool {
+func (b *Board) Fits(tile Tile, turned bool) bool {
 	// fmt.Println(tile)
 	candIndex := len(b.Candidates) - 1
 	pos := b.Candidates[candIndex]
 	tile.Place(pos, turned)
-	if !b.tileFitsBoard(tile) {
+	if !b.tileFitsBoard(&tile) {
 		tile.Remove()
 		return false
 	}
-	for _, tile2 := range b.Tiles { //TODO cache last collided tile, and check that one first
-		if tile.collides(*tile2) {
+
+	if b.lastCollision != nil {
+		if tile.collides(b.lastCollision) {
 			tile.Remove()
+			return false
+		}
+	}
+
+	for _, tile2 := range b.Tiles {
+		if tile.collides(tile2) {
+			tile.Remove()
+			b.lastCollision = tile2
 			return false
 		}
 	}
@@ -50,9 +60,9 @@ func (b Board) Fits(tile Tile, turned bool) bool {
 }
 
 //tileFitsBoard checks if the tile with it's internal rotation and position fits inside the board
-func (b Board) tileFitsBoard(tile Tile) bool {
-	if tile.X < 0 || tile.Y < 0 || //check bottom and left side
-		tile.X+tile.CurW > b.Size.X || tile.Y+tile.CurH > b.Size.Y { //check top and right side
+func (b *Board) tileFitsBoard(tile *Tile) bool {
+	if tile.X+tile.CurW > b.Size.X || tile.Y+tile.CurH > b.Size.Y || //check top and right side
+		tile.X < 0 || tile.Y < 0 { //check bottom and left side
 		return false
 	}
 	return true
@@ -95,7 +105,7 @@ func (b *Board) addCandidates(tile Tile) {
 			newCands[0].Y = y
 			//if there was a collision before, check if the same tile collides again
 			if lastCollision != nil {
-				if lastCollision.posCollides(newCands[0]) {
+				if lastCollision.posCollides(&newCands[0]) {
 					continue
 				}
 			}
@@ -113,11 +123,11 @@ func (b *Board) addCandidates(tile Tile) {
 	}
 }
 
-func (b Board) posCollides(pos Coord) (collides bool, collider *Tile) {
+func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
 	collides = false
 	collider = nil
 	for _, tile := range b.Tiles {
-		if tile.posCollides(pos) {
+		if tile.posCollides(&pos) {
 			collider = tile
 			collides = true
 			return

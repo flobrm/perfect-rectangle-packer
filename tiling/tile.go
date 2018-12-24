@@ -59,7 +59,7 @@ func (t Tile) GetNeighborSpots() []Coord {
 	return spots[:]
 }
 
-func (t Tile) collides(b Tile) bool { //TODO pass by reference if necessary for speed
+func (t *Tile) collides(b *Tile) bool { //TODO pass by reference if necessary for speed
 	if t.X >= b.X+b.CurW || b.X >= t.X+t.CurW {
 		return false
 	}
@@ -69,7 +69,7 @@ func (t Tile) collides(b Tile) bool { //TODO pass by reference if necessary for 
 	return true
 }
 
-func (t Tile) posCollides(pos Coord) bool {
+func (t *Tile) posCollides(pos *Coord) bool {
 	if pos.X < t.X || pos.X >= t.X+t.CurW {
 		return false
 	}

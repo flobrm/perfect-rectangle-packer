@@ -84,7 +84,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 		// 	// fmt.Println("step: ", step)
 		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
 		// }
-		// if step >= 268 {
+		// if step >= 11 {
 		// 	fmt.Println("start debugging here")
 		// }
 		if step == 100000000 {
@@ -95,7 +95,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 			//TODO record solution
 			//TODO return if only 1 solution requested
 			//tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
-			fmt.Println("solution found")
+			// fmt.Println("solution found")
 		}
 		step++
 

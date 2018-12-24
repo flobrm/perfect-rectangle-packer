@@ -1,28 +1,67 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"localhost/flobrm/tilingsolver/tiling"
+	"log"
+	"os"
+	"runtime"
+	"runtime/pprof"
 	"time"
 )
 
 var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 func main() {
+
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	start := time.Now()
 
-	// build asqas 8
-	var tiles [8]tiling.Coord
+	// // build asqas 8
+	// var tiles [8]tiling.Coord
+	// for i := range tiles {
+	// 	tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	// }
+	// solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+
+	// build asqas 20
+	var tiles [20]tiling.Coord
 	for i := range tiles {
-		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
+		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
 
 	elapsed := time.Since(start)
 	fmt.Println("time: ", elapsed)
 
 	fmt.Println()
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+		f.Close()
+	}
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile {
@@ -48,11 +87,14 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 		// if step >= 268 {
 		// 	fmt.Println("start debugging here")
 		// }
+		if step == 100000000 {
+			return solutions
+		}
 
 		if tilesPlaced == numTiles {
 			//TODO record solution
 			//TODO return if only 1 solution requested
-			tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			//tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
 			fmt.Println("solution found")
 		}
 		step++

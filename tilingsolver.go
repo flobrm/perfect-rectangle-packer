@@ -11,7 +11,8 @@ import (
 	"time"
 )
 
-var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+//var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -32,19 +33,19 @@ func main() {
 
 	start := time.Now()
 
-	// // build asqas 8
-	// var tiles [8]tiling.Coord
-	// for i := range tiles {
-	// 	tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
-	// }
-	// solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+	// build asqas 8
+	var tiles [8]tiling.Coord
+	for i := range tiles {
+		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	}
+	solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
 
 	// build asqas 20
-	var tiles [20]tiling.Coord
-	for i := range tiles {
-		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
-	}
-	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
+	// var tiles [20]tiling.Coord
+	// for i := range tiles {
+	// 	tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	// }
+	// solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
 
 	elapsed := time.Since(start)
 	fmt.Println("time: ", elapsed)
@@ -80,10 +81,10 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 	step := 0
 
 	for {
-		// if step > 0 {
-		// 	// fmt.Println("step: ", step)
-		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
-		// }
+		if step > 0 {
+			// fmt.Println("step: ", step)
+			// tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
+		}
 		// if step >= 11 {
 		// 	fmt.Println("start debugging here")
 		// }

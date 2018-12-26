@@ -2,3 +2,4 @@
 img/*
 *.png
 profiling/
+*.prof

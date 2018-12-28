@@ -1,0 +1,2 @@
+id, batch, num_tiles, board_width, board_height, tiles
+1,2,8,16,15,"[(9,8),(8,7),(7,6),(6,5),(5,4),(4,3),(3,2),(2,1)]"

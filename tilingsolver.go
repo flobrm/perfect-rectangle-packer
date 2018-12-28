@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"localhost/flobrm/tilingsolver/io"
 	"localhost/flobrm/tilingsolver/tiling"
 	"log"
 	"os"
@@ -14,8 +15,11 @@ import (
 //var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
+var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
+
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+var inputPath = flag.String("inputpath", "", "input file with puzzles")
 
 func main() {
 
@@ -31,21 +35,18 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
+	//TODO remove after debugging
+	inputPath = &inputFile
+	if *inputPath == "" {
+		log.Fatal("No inputpath specified")
+	}
+
 	start := time.Now()
 
-	// build asqas 8
-	var tiles [8]tiling.Coord
-	for i := range tiles {
-		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
-	}
-	solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
-
-	// build asqas 20
-	// var tiles [20]tiling.Coord
-	// for i := range tiles {
-	// 	tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
-	// }
-	// solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
+	//TODO
+	puzzleReader := io.NewPuzzleCSVReader(*inputPath)
+	fmt.Println(puzzleReader.NextPuzzle())
+	fmt.Print(puzzleReader.NextPuzzle())
 
 	elapsed := time.Since(start)
 	fmt.Println("time: ", elapsed)
@@ -63,6 +64,24 @@ func main() {
 		}
 		f.Close()
 	}
+}
+
+func solveAsQas8() {
+	// build asqas 8
+	var tiles [8]tiling.Coord
+	for i := range tiles {
+		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	}
+	solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+}
+
+func solveAsQas20() {
+	// build asqas 20
+	var tiles [20]tiling.Coord
+	for i := range tiles {
+		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	}
+	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile {

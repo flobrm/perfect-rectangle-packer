@@ -3,27 +3,30 @@ package main
 import (
 	"flag"
 	"fmt"
-	"localhost/flobrm/tilingsolver/io"
+	"localhost/flobrm/tilingsolver/tileio"
 	"localhost/flobrm/tilingsolver/tiling"
 	"log"
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 )
 
-//var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+
+// var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
+var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var inputPath = flag.String("inputpath", "", "input file with puzzles")
 
 func main() {
-
 	flag.Parse()
+	//profiling cpu if cpuprofile is specified
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -43,16 +46,20 @@ func main() {
 
 	start := time.Now()
 
-	//TODO
-	puzzleReader := io.NewPuzzleCSVReader(*inputPath)
-	fmt.Println(puzzleReader.NextPuzzle())
-	fmt.Print(puzzleReader.NextPuzzle())
+	solveFromFile(inputPath)
+
+	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
+	// puzzle, _ := puzzleReader.NextPuzzle()
+	// fmt.Println(puzzle)
+
+	// jsonBytes, _ := json.Marshal(puzzle)
+	// fmt.Println("json:", string(jsonBytes))
+	// fmt.Print(puzzleReader.NextPuzzle())
 
 	elapsed := time.Since(start)
 	fmt.Println("time: ", elapsed)
 
-	fmt.Println()
-
+	//Profiling memory
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
 		if err != nil {
@@ -82,6 +89,26 @@ func solveAsQas20() {
 		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
 	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:])
+}
+
+func solveFromFile(filePath *string) {
+	pathParts := strings.Split(*filePath, ".")
+	extension := pathParts[len(pathParts)-1]
+	var reader tileio.PuzzleReader
+	if extension == "json" {
+		reader = tileio.NewPuzzleJSONReader(*filePath)
+	} else if extension == "csv" {
+		reader = tileio.NewPuzzleCSVReader(*filePath)
+	}
+
+	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
+		solutions := solveNaive(puzzle.Board, *puzzle.Tiles)
+		fmt.Println("solved a puzzle")
+		for _, solution := range solutions {
+			fmt.Println(solution)
+		}
+	}
+	fmt.Println("finished")
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile {

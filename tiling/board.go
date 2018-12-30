@@ -42,7 +42,7 @@ func (b *Board) Fits(tile Tile, turned bool) bool {
 		return false
 	}
 
-	if b.lastCollision != nil {
+	if b.lastCollision != nil && b.lastCollision.Placed {
 		if tile.collides(b.lastCollision) {
 			tile.Remove()
 			return false

@@ -46,7 +46,8 @@ func main() {
 
 	start := time.Now()
 
-	solveFromFile(inputPath)
+	// solveFromFile(inputPath)
+	solveAsQas8()
 
 	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
 	// puzzle, _ := puzzleReader.NextPuzzle()
@@ -105,6 +106,7 @@ func solveFromFile(filePath *string) {
 		solutions := solveNaive(puzzle.Board, *puzzle.Tiles)
 		fmt.Println("solved a puzzle")
 		for _, solution := range solutions {
+			//TODO write solutions
 			fmt.Println(solution)
 		}
 	}
@@ -131,17 +133,19 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 			// fmt.Println("step: ", step)
 			// tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
 		}
-		// if step >= 11 {
+		// if step >= 664 {
 		// 	fmt.Println("start debugging here")
 		// }
-		if step == 100000000 {
-			return solutions
-		}
+		// if step == 100000000 {
+		// 	return solutions
+		// }
 
 		if tilesPlaced == numTiles {
-			//TODO record solution
 			//TODO return if only 1 solution requested
-			//tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			// tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			newSolution := make([]tiling.Tile, numTiles)
+			copy(newSolution, tiles)
+			solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}
 		step++

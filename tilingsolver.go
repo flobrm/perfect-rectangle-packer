@@ -47,7 +47,10 @@ func main() {
 	start := time.Now()
 
 	// solveFromFile(inputPath)
-	solveAsQas8()
+	solutions := solveAsQas8()
+	for _, solution := range solutions {
+		fmt.Println(solution)
+	}
 
 	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
 	// puzzle, _ := puzzleReader.NextPuzzle()
@@ -74,13 +77,23 @@ func main() {
 	}
 }
 
-func solveAsQas8() {
+func solveAsQas8() [][]tiling.Tile {
 	// build asqas 8
 	var tiles [8]tiling.Coord
 	for i := range tiles {
 		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+	return solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:])
+	// for i := range solutions {
+	// 	board := tiling.NewBoard(tiling.Coord{X: 15, Y: 16}, solutions[i])
+	// 	boardTiles := make([]*tiling.Tile, len(solutions[i]))
+	// 	for j := range solutions[i] {
+	// 		boardTiles[j] = &solutions[i][j]
+	// 	}
+	// 	board.Tiles = boardTiles
+	// 	tiling.SaveBoardPic(board, fmt.Sprint("img/", i, ".png"), 5)
+	// 	fmt.Println(i, solutions[i])
+	// }
 }
 
 func solveAsQas20() {
@@ -145,6 +158,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 			// tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
+			board.GetCanonicalSolution(&newSolution)
 			solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}
@@ -153,7 +167,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 		// fmt.Print("starting new round\n\n")
 		// fmt.Println(board)
 
-		placedThisRound := false
+		placedThisRound := false //Is this still necessary? we break after placing a tile
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
 				// fmt.Println("trying to fit tile", tiles[i])

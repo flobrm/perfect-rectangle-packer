@@ -181,3 +181,79 @@ func isTopCandidate(cand Coord, tile Tile) bool {
 	}
 	return false
 }
+
+//Functions to flip new tiles horizontally or vertically
+
+//Ways to consistently refer to corners of a board or tile
+const (
+	noCorner          = iota
+	bottomLeftCorner  = iota
+	bottomRightCorner = iota
+	topLeftCorner     = iota
+	topRightCorner    = iota
+)
+
+//GetCanonicalSolution returns a slice of tiles as placed on the current board
+//but flips the board so the corner with the largest tile is bottom right.
+func (b *Board) GetCanonicalSolution(tiles *[]Tile) {
+	var largestCornerTile *Tile
+	var largestCorner = bottomLeftCorner
+	//first determine what the largest corner is
+	for _, tile := range *tiles {
+		corner := b.isCornerTile(&tile)
+		if corner != noCorner {
+			if largestCornerTile == nil {
+				largestCornerTile = &tile
+				largestCorner = corner
+			} else if tile.W > largestCornerTile.W ||
+				tile.W == largestCornerTile.W && tile.Y > largestCornerTile.Y {
+				largestCornerTile = &tile
+				largestCorner = corner
+			}
+		}
+	}
+
+	//Second flip the tiles depending on the largest corner
+	if largestCorner == bottomLeftCorner {
+		//Do nothing
+	} else if largestCorner == bottomRightCorner {
+		b.flipTilesHorizontally(tiles)
+	} else if largestCorner == topLeftCorner {
+		b.flipTilesVertically(tiles)
+	} else { //TOP_RIGHT_CORNER
+		b.flipTilesHorizontally(tiles)
+		b.flipTilesVertically(tiles)
+	}
+}
+
+//isCornerTile checks if t is a corner on the current board.
+//It returns one of the constants ending in CORNER.
+func (b *Board) isCornerTile(t *Tile) int {
+	if t.X == 0 && t.Y == 0 {
+		return bottomLeftCorner
+	} else if t.Y == 0 && t.X+t.CurW == b.Size.X {
+		return bottomRightCorner
+	} else if t.X == 0 && t.Y+t.CurH == b.Size.Y {
+		return topLeftCorner
+	} else if t.X+t.CurW == b.Size.X && t.Y+t.CurH == b.Size.Y {
+		return topRightCorner
+	} else {
+		return noCorner
+	}
+}
+
+func (b *Board) flipTilesHorizontally(tiles *[]Tile) *[]Tile {
+	for i := range *tiles {
+		// tile2.X = b.Size.X - tile2.X - tile2.CurW
+		(*tiles)[i].X = b.Size.X - (*tiles)[i].X - (*tiles)[i].CurW
+	}
+
+	return tiles
+}
+
+func (b *Board) flipTilesVertically(tiles *[]Tile) *[]Tile {
+	for i := range *tiles {
+		(*tiles)[i].Y = b.Size.Y - (*tiles)[i].Y - (*tiles)[i].CurH
+	}
+	return tiles
+}

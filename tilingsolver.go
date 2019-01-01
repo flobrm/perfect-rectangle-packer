@@ -48,8 +48,8 @@ func main() {
 
 	// solveFromFile(inputPath)
 	solutions := solveAsQas8()
-	for _, solution := range solutions {
-		fmt.Println(solution)
+	for key, solution := range solutions {
+		fmt.Println(key, solution)
 	}
 
 	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
@@ -77,7 +77,7 @@ func main() {
 	}
 }
 
-func solveAsQas8() [][]tiling.Tile {
+func solveAsQas8() map[string][]tiling.Tile {
 	// build asqas 8
 	var tiles [8]tiling.Coord
 	for i := range tiles {
@@ -126,13 +126,14 @@ func solveFromFile(filePath *string) {
 	fmt.Println("finished")
 }
 
-func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile {
+func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]tiling.Tile {
 	tiles := make([]tiling.Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = tiling.NewTile(tileDims[i].X, tileDims[i].Y)
 	}
 	board := tiling.NewBoard(boardDims, tiles)
-	solutions := make([][]tiling.Tile, 0) //random starting value
+	// solutions := make([][]tiling.Tile, 0) //random starting value
+	solutions := make(map[string][]tiling.Tile, 0)
 
 	placedTileIndex := make([]int, len(tileDims))[:0] //keeps track of which tiles are currently placed in which order
 	tilesPlaced := 0
@@ -159,7 +160,12 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) [][]tiling.Tile
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
-			solutions = append(solutions, newSolution)
+			// preLength := len(solutions)
+			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
+			// if len(solutions) != preLength {
+			// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			// }
+			// solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}
 		step++

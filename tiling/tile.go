@@ -1,6 +1,7 @@
 package tiling
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -12,8 +13,11 @@ type Coord struct {
 /*Tile is a puzzle piece
  */
 type Tile struct {
-	W, H, X, Y, CurW, CurH int
-	Placed, Turned         bool
+	W, H, X, Y int
+	CurW       int  `json:"-"`
+	CurH       int  `json:"-"`
+	Placed     bool `json:"-"`
+	Turned     bool `json:"T"`
 }
 
 //NewTile initializes tile
@@ -77,4 +81,28 @@ func (t *Tile) posCollides(pos *Coord) bool {
 		return false
 	}
 	return true
+}
+
+// func (t *Tile) Equals(o *Tile) bool {
+// 	return t.W == o.W && t.H == o.H && t.X == o.X && t.Y == o.Y && t.Turned == o.Turned
+// }
+
+// type TileSliceSet struct {
+// 	slice [][]Tile
+// }
+
+// func (slice *[]Tile) Equals(other *[]Tile)
+
+// func (set *TileSliceSet) Add(tileSlice []Tile) {
+
+// }
+
+// func (set *TileSliceSet) Contains(tileSlice []Tile) bool {
+
+// }
+
+//TileSliceToJSON returns a JSON string encoding the width, height, and positioning data of a tile
+func TileSliceToJSON(tiles []Tile) string {
+	result, _ := json.Marshal(tiles) //TODO don't ignore error //TODO remove curw, curh
+	return string(result)
 }

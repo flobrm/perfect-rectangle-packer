@@ -26,7 +26,7 @@ type PuzzleCSVReader struct {
 
 //PuzzleDescription describes a tiling puzzle
 type PuzzleDescription struct {
-	Id    int
+	ID    int
 	Batch int
 	Board tiling.Coord
 	Tiles *[]tiling.Coord
@@ -80,7 +80,7 @@ func (r PuzzleCSVReader) NextPuzzle() (PuzzleDescription, error) {
 		}
 
 		puzzle := PuzzleDescription{
-			Id:    parseInt(record[r.header["id"]]),
+			ID:    parseInt(record[r.header["id"]]),
 			Batch: parseInt(record[r.header["batch"]]),
 			Board: tiling.Coord{
 				X: parseInt(record[r.header["board_width"]]),
@@ -135,9 +135,8 @@ func (r PuzzleJSONReader) NextPuzzle() (PuzzleDescription, error) {
 		err := json.Unmarshal(line, &puzzle)
 		if err == nil {
 			return puzzle, nil
-		} else {
-			fmt.Println("lineNumber:", r.lineNumber, "error:", err)
 		}
+		fmt.Println("lineNumber:", r.lineNumber, "error:", err)
 	}
 	return PuzzleDescription{}, io.EOF
 }

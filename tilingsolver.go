@@ -38,6 +38,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
+	solveFromDatabase()
+
 	//TODO remove after debugging
 	inputPath = &inputFile
 	if *inputPath == "" {
@@ -47,10 +49,11 @@ func main() {
 	start := time.Now()
 
 	// solveFromFile(inputPath)
-	solutions := solveAsQas8()
-	for key, solution := range solutions {
-		fmt.Println(key, solution)
-	}
+
+	// solutions := solveAsQas8()
+	// for key, solution := range solutions {
+	// 	fmt.Println(key, solution)
+	// }
 
 	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
 	// puzzle, _ := puzzleReader.NextPuzzle()
@@ -124,6 +127,13 @@ func solveFromFile(filePath *string) {
 		}
 	}
 	fmt.Println("finished")
+}
+
+func solveFromDatabase() {
+	db := tileio.Open()
+	//defer tileio.Close(db)
+	puzzles := tileio.GetNewPuzzles(db, 1)
+	fmt.Print(puzzles)
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]tiling.Tile {

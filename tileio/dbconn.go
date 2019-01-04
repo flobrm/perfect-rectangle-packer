@@ -3,9 +3,13 @@ package tileio
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"localhost/flobrm/tilingsolver/tiling"
 	"log"
+	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql" //import mysql driver, blank because the interface is "database/sql"
 )
@@ -49,7 +53,7 @@ type Puzzle struct {
 }
 
 //GetNewPuzzles returns
-func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) []Puzzle {
+func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 	//TODO random expo backoff
 
 	context := context.Background()
@@ -73,20 +77,57 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) []Puzzle {
 	if err != nil {
 		log.Println("Error fetching puzzles: ", err)
 		transaction.Rollback()
+		//TODO return error
 	}
-	resultRows := make([]puzzleRow, numPuzzles)
+	puzzles := make([]Puzzle, numPuzzles)
 	rowsRead := 0
 	for ; result.Next(); rowsRead++ {
-		err = result.Scan(&resultRows[rowsRead].id, &resultRows[rowsRead].numTiles, &resultRows[rowsRead].boardWidth, &resultRows[rowsRead].boardHeight, &resultRows[rowsRead].tiles)
+		var tileJSON []byte
+		err = result.Scan(&puzzles[rowsRead].ID, &puzzles[rowsRead].NumTiles, &puzzles[rowsRead].BoardDims.X,
+			&puzzles[rowsRead].BoardDims.Y, &tileJSON)
 		if err != nil {
 			log.Println("Error reading puzzle row:", err)
+			log.Println("skipping unknown puzzle")
+			rowsRead--
+			continue
 		}
+		tiles := make([]tiling.Coord, puzzles[rowsRead].NumTiles)
+		err = json.Unmarshal(tileJSON, &tiles)
+		if err != nil {
+			log.Println("Error reading tiles json:", err)
+			log.Println("skipping puzzle id", puzzles[rowsRead].ID)
+			rowsRead--
+		}
+		puzzles[rowsRead].Tiles = &tiles
 
-		fmt.Println(resultRows[rowsRead], *resultRows[rowsRead].tiles)
+		fmt.Println(puzzles[rowsRead], *puzzles[rowsRead].Tiles)
 	}
-	resultRows = resultRows[:rowsRead] //TODO check off by one error
+	puzzles = puzzles[:rowsRead] //TODO check off by one error
 
-	err = transaction.Commit() //TODO
+	//Now start updating puzzles to 'busy'
+	ids := make([]string, len(puzzles))
+	for i, puzzle := range puzzles {
+		ids[i] = strconv.Itoa(puzzle.ID)
+	}
+	idsString := strings.Join(ids, ",")
+	query = fmt.Sprintf("UPDATE puzzles SET status = 'busy' WHERE id IN (%s)", idsString)
+	fmt.Println(query)
+	updateResult, err := transaction.Exec(query)
+	if err != nil {
+		log.Println("Error updating puzzle status:", err)
+		err = transaction.Rollback()
+		return puzzles, errors.New("rollback")
+	}
+	fmt.Println(updateResult)
+	err = transaction.Commit()
+	if err != nil {
+		log.Println("error commiting busy puzzles", err)
+		err = transaction.Rollback()
+		if err != nil {
+			log.Fatal("Also error rolling back ", err)
+		}
+		return puzzles, errors.New("rollback")
+	}
 
-	return puzzles
+	return puzzles, nil
 }

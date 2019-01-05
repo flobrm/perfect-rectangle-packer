@@ -38,15 +38,15 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	solveFromDatabase()
-
 	//TODO remove after debugging
-	inputPath = &inputFile
-	if *inputPath == "" {
-		log.Fatal("No inputpath specified")
-	}
+	// inputPath = &inputFile
+	// if *inputPath == "" {
+	// 	log.Fatal("No inputpath specified")
+	// }
 
 	start := time.Now()
+
+	solveFromDatabase()
 
 	// solveFromFile(inputPath)
 
@@ -131,9 +131,24 @@ func solveFromFile(filePath *string) {
 
 func solveFromDatabase() {
 	db := tileio.Open()
-	//defer tileio.Close(db)
-	puzzles := tileio.GetNewPuzzles(db, 1)
-	fmt.Print(puzzles)
+	defer tileio.Close(db)
+	puzzles, err := tileio.GetNewPuzzles(db, 1000, 8)
+	if err != nil {
+		log.Println(err)
+		log.Fatal("whatever")
+	}
+	for _, puzzle := range puzzles {
+		//TODO log which puzzle is started
+		solutions := solveNaive(puzzle.BoardDims, *puzzle.Tiles)
+		//TODO log which puzzle is ended
+		//TODO log all solutions
+
+		//insert solutions into db
+		err = tileio.InsertSolutions(db, puzzle.ID, &solutions)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]tiling.Tile {

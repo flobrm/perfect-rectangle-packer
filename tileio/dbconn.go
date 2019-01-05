@@ -131,3 +131,37 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 
 	return puzzles, nil
 }
+
+// InsertSolutions adds solutions as json to the solutions table
+func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Tile) error {
+
+	if len(*solutions) > 0 {
+		puzzleIDString := strconv.Itoa(puzzleID)
+		query := "INSERT IGNORE INTO tiling.solutions (puzzles_id, tiles) VALUES "
+		//TODO add key index to (puzzleId,tiles)
+		var values []interface{}
+		args := make([]string, len(*solutions))[:0]
+
+		for key := range *solutions {
+			values = append(values, puzzleIDString, key)
+			args = append(args, "(?,?)")
+		}
+
+		query += strings.Join(args, ",")
+		_, err := db.Exec(query, values...)
+		if err != nil {
+			log.Println("error inserting solutions: ", err)
+			log.Fatal("Giving up on all solutions")
+			//TODO return error
+		}
+	}
+
+	query := "UPDATE tiling.puzzles SET status = 'solved' WHERE id = ? "
+	_, err := db.Exec(query, puzzleID)
+	if err != nil {
+		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
+		return errors.New("failedSolutionsUpdate")
+	}
+
+	return nil
+}

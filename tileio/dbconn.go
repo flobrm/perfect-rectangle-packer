@@ -2,7 +2,9 @@ package tileio
 
 import (
 	"context"
+	"crypto/sha1"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql" //import mysql driver, blank because the interface is "database/sql"
 )
@@ -99,8 +102,6 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 			rowsRead--
 		}
 		puzzles[rowsRead].Tiles = &tiles
-
-		fmt.Println(puzzles[rowsRead], *puzzles[rowsRead].Tiles)
 	}
 	puzzles = puzzles[:rowsRead] //TODO check off by one error
 
@@ -111,14 +112,13 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 	}
 	idsString := strings.Join(ids, ",")
 	query = fmt.Sprintf("UPDATE puzzles SET status = 'busy' WHERE id IN (%s)", idsString)
-	fmt.Println(query)
-	updateResult, err := transaction.Exec(query)
+	log.Println(query)
+	_, err = transaction.Exec(query)
 	if err != nil {
 		log.Println("Error updating puzzle status:", err)
 		err = transaction.Rollback()
 		return puzzles, errors.New("rollback")
 	}
-	fmt.Println(updateResult)
 	err = transaction.Commit()
 	if err != nil {
 		log.Println("error commiting busy puzzles", err)
@@ -133,18 +133,21 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 }
 
 // InsertSolutions adds solutions as json to the solutions table
-func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Tile) error {
+func InsertSolutions(db *sql.DB, puzzleID int, solverID int, duration time.Duration, solutions *map[string][]tiling.Tile) error {
 
 	if len(*solutions) > 0 {
 		puzzleIDString := strconv.Itoa(puzzleID)
-		query := "INSERT IGNORE INTO tiling.solutions (puzzles_id, tiles) VALUES "
+		query := "INSERT IGNORE INTO tiling.solutions (puzzles_id, tiles_hash, tiles) VALUES "
 		//TODO add key index to (puzzleId,tiles)
 		var values []interface{}
 		args := make([]string, len(*solutions))[:0]
 
 		for key := range *solutions {
-			values = append(values, puzzleIDString, key)
-			args = append(args, "(?,?)")
+			hasher := sha1.New()
+			hasher.Write([]byte(key))
+			hashString := hex.EncodeToString(hasher.Sum(nil))
+			values = append(values, puzzleIDString, hashString, key)
+			args = append(args, "(?,?,?)")
 		}
 
 		query += strings.Join(args, ",")
@@ -156,8 +159,8 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 		}
 	}
 
-	query := "UPDATE tiling.puzzles SET status = 'solved' WHERE id = ? "
-	_, err := db.Exec(query, puzzleID)
+	query := "UPDATE tiling.puzzles SET status = 'solved', solver_id = ?, duration = ? WHERE id = ? "
+	_, err := db.Exec(query, solverID, duration.Nanoseconds(), puzzleID)
 	if err != nil {
 		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
 		return errors.New("failedSolutionsUpdate")

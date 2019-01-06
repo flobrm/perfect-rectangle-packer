@@ -24,6 +24,11 @@ var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var inputPath = flag.String("inputpath", "", "input file with puzzles")
 
+var numTiles = flag.Int("num_tiles", 0, "Solve only puzzles with this many tiles.")
+var puzzleLimit = flag.Int("puzzle_limit", 0, "Solve at most N puzzles")
+var batchSize = flag.Int("batch_size", 1, "How many puzzles should the program reserve at once")
+var solverID = flag.Int("solver_id", 0, "Used to differentiate between different solvers and hardware")
+
 func main() {
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
@@ -38,6 +43,11 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
+	if *solverID <= 0 {
+		fmt.Println("No, or illegal, solver_id specified")
+		return
+	}
+
 	//TODO remove after debugging
 	// inputPath = &inputFile
 	// if *inputPath == "" {
@@ -46,25 +56,10 @@ func main() {
 
 	start := time.Now()
 
-	solveFromDatabase()
-
-	// solveFromFile(inputPath)
-
-	// solutions := solveAsQas8()
-	// for key, solution := range solutions {
-	// 	fmt.Println(key, solution)
-	// }
-
-	// puzzleReader := io.NewPuzzleCSVReader(*inputPath)
-	// puzzle, _ := puzzleReader.NextPuzzle()
-	// fmt.Println(puzzle)
-
-	// jsonBytes, _ := json.Marshal(puzzle)
-	// fmt.Println("json:", string(jsonBytes))
-	// fmt.Print(puzzleReader.NextPuzzle())
+	solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
 
 	elapsed := time.Since(start)
-	fmt.Println("time: ", elapsed)
+	log.Println("time: ", elapsed)
 
 	//Profiling memory
 	if *memprofile != "" {
@@ -120,35 +115,49 @@ func solveFromFile(filePath *string) {
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
 		solutions := solveNaive(puzzle.Board, *puzzle.Tiles)
-		fmt.Println("solved a puzzle")
+		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
 			fmt.Println(solution)
 		}
 	}
-	fmt.Println("finished")
+	log.Println("finished")
 }
 
-func solveFromDatabase() {
+func solveFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverID int) {
 	db := tileio.Open()
 	defer tileio.Close(db)
-	puzzles, err := tileio.GetNewPuzzles(db, 1000, 8)
-	if err != nil {
-		log.Println(err)
-		log.Fatal("whatever")
-	}
-	for _, puzzle := range puzzles {
-		//TODO log which puzzle is started
-		solutions := solveNaive(puzzle.BoardDims, *puzzle.Tiles)
-		//TODO log which puzzle is ended
-		//TODO log all solutions
 
-		//insert solutions into db
-		err = tileio.InsertSolutions(db, puzzle.ID, &solutions)
+	puzzlesSolved := 0
+
+	for puzzleLimit == 0 || puzzlesSolved < puzzleLimit {
+		puzzles, err := tileio.GetNewPuzzles(db, batchSize, numTiles)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			log.Fatal("whatever")
+		}
+
+		for _, puzzle := range puzzles {
+			log.Println("start solving puzzle", puzzle.ID)
+			solveStart := time.Now()
+			solutions := solveNaive(puzzle.BoardDims, *puzzle.Tiles)
+			solveTime := time.Since(solveStart)
+
+			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
+			log.Println(len(solutions), "solutions found for puzzle ", puzzle.ID)
+
+			//insert solutions into db
+			err = tileio.InsertSolutions(db, puzzle.ID, solverID, solveTime, &solutions)
+			if err != nil {
+				log.Fatal(err)
+			}
+			puzzlesSolved++
+		}
+		if len(puzzles) < batchSize {
+			break
 		}
 	}
+	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
 func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]tiling.Tile {

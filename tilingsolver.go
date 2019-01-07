@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
 var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
@@ -58,8 +58,8 @@ func main() {
 	start := time.Now()
 
 	//solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
-	fmt.Print(len(solveAsQas8()))
-	// fmt.Print(len(solveTestCase()))
+	// fmt.Print(len(solveAsQas8()))
+	fmt.Print(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)
@@ -206,6 +206,9 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	startRotation := false
 	step := 0
 
+	rotatedSolutions := 0
+	totalSolutions := 0
+
 	for {
 		// if step > 0 {
 		// 	fmt.Println("step: ", step)
@@ -224,9 +227,10 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 			// }
 			//TODO return if only 1 solution requested
 			// tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			totalSolutions++
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
-			board.GetCanonicalSolution(&newSolution)
+			rotatedSolutions += board.GetCanonicalSolution(&newSolution)
 			preLength := len(solutions)
 			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
 			if len(solutions) != preLength {
@@ -271,6 +275,8 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 		}
 		if !placedThisRound {
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
+				fmt.Println("rotated solutions:", rotatedSolutions)
+				fmt.Println("total solutions:", totalSolutions)
 				return solutions
 			}
 

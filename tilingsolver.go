@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"localhost/flobrm/tilingsolver/tileio"
@@ -13,9 +14,9 @@ import (
 	"time"
 )
 
-var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
 var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
@@ -45,7 +46,7 @@ func main() {
 
 	if *solverID <= 0 {
 		fmt.Println("No, or illegal, solver_id specified")
-		return
+		// return //TODO reenable after debugging
 	}
 
 	//TODO remove after debugging
@@ -56,7 +57,9 @@ func main() {
 
 	start := time.Now()
 
-	solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	//solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	fmt.Print(len(solveAsQas8()))
+	// fmt.Print(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)
@@ -73,6 +76,33 @@ func main() {
 		}
 		f.Close()
 	}
+}
+
+func solveTestCase() map[string][]tiling.Tile {
+	board := tiling.Coord{X: 41, Y: 25}
+	tiles := make([]tiling.Coord, 11)
+	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
+	json.Unmarshal(tileBytes, &tiles)
+	return solveNaive(board, tiles)
+}
+
+func solveAsQas3() map[string][]tiling.Tile {
+	// build asqas 3
+	var tiles [3]tiling.Coord
+	for i := range tiles {
+		tiles[2-i] = tiling.Coord{X: i + 2, Y: i + 1}
+	}
+	return solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:])
+	// for i := range solutions {
+	// 	board := tiling.NewBoard(tiling.Coord{X: 15, Y: 16}, solutions[i])
+	// 	boardTiles := make([]*tiling.Tile, len(solutions[i]))
+	// 	for j := range solutions[i] {
+	// 		boardTiles[j] = &solutions[i][j]
+	// 	}
+	// 	board.Tiles = boardTiles
+	// 	tiling.SaveBoardPic(board, fmt.Sprint("img/", i, ".png"), 5)
+	// 	fmt.Println(i, solutions[i])
+	// }
 }
 
 func solveAsQas8() map[string][]tiling.Tile {
@@ -177,28 +207,31 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	step := 0
 
 	for {
-		if step > 0 {
-			// fmt.Println("step: ", step)
-			// tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
-		}
+		// if step > 0 {
+		// 	fmt.Println("step: ", step)
+		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
+		// }
 		// if step >= 664 {
 		// 	fmt.Println("start debugging here")
 		// }
-		// if step == 100000000 {
+		// if step == 500 {
 		// 	return solutions
 		// }
 
 		if tilesPlaced == numTiles {
+			// if step == 45432021 {
+			// 	fmt.Println("stop to check stuff")
+			// }
 			//TODO return if only 1 solution requested
 			// tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
-			// preLength := len(solutions)
+			preLength := len(solutions)
 			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
-			// if len(solutions) != preLength {
-			// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
-			// }
+			if len(solutions) != preLength {
+				tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%010d.png", imgPath, step), 5)
+			}
 			// solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}
@@ -240,6 +273,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
 				return solutions
 			}
+
 			//Remove the last tile and keep track of which tile to try next
 			// fmt.Println("REMOVING tile", tiles[placedTileIndex[len(placedTileIndex)-1]])
 			tilesPlaced--
@@ -254,6 +288,13 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 				startRotation = false
 			}
 			placedTileIndex = placedTileIndex[:len(placedTileIndex)-1]
+
+			//This only works if all tiles are smaller than both board sides
+			// if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
+			// 	if startIndex == len(tiles)-4 {
+			// 		return solutions
+			// 	}
+			// }
 		}
 	}
 }

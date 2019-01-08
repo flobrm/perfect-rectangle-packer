@@ -199,6 +199,10 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	// solutions := make([][]tiling.Tile, 0) //random starting value
 	solutions := make(map[string][]tiling.Tile, 0)
 
+	// Only skip the last 3 start tiles only if we have to use a separate tile for each corner
+	// aka only if the largest side of the largest tile is smaller than the smallest side of the board.
+	doSkipLastStartTiles := boardDims.Y > tileDims[0].X
+
 	placedTileIndex := make([]int, len(tileDims))[:0] //keeps track of which tiles are currently placed in which order
 	tilesPlaced := 0
 	numTiles := len(tiles)
@@ -298,7 +302,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 
 			//This only works if all tiles are smaller than both board sides
 			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
-				if startIndex == len(tiles)-4 {
+				if doSkipLastStartTiles && startIndex == len(tiles)-4 {
 					return solutions
 				}
 			}

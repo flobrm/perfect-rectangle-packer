@@ -195,7 +195,7 @@ const (
 
 //GetCanonicalSolution returns a slice of tiles as placed on the current board
 //but flips the board so the corner with the largest tile is bottom right.
-func (b *Board) GetCanonicalSolution(tiles *[]Tile) {
+func (b *Board) GetCanonicalSolution(tiles *[]Tile) int {
 	var largestCornerTile *Tile
 	var largestCorner = bottomLeftCorner
 	//first determine what the largest corner is
@@ -218,12 +218,16 @@ func (b *Board) GetCanonicalSolution(tiles *[]Tile) {
 		//Do nothing
 	} else if largestCorner == bottomRightCorner {
 		b.flipTilesHorizontally(tiles)
+		return 1
 	} else if largestCorner == topLeftCorner {
 		b.flipTilesVertically(tiles)
+		return 1
 	} else { //TOP_RIGHT_CORNER
 		b.flipTilesHorizontally(tiles)
 		b.flipTilesVertically(tiles)
+		return 1
 	}
+	return 0
 }
 
 //isCornerTile checks if t is a corner on the current board.

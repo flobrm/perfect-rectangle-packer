@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
 var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
@@ -206,6 +206,9 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	startRotation := false
 	step := 0
 
+	rotatedSolutions := 0
+	totalSolutions := 0
+
 	for {
 		if step > 83141 && step < 85000 {
 			fmt.Println("step: ", step)
@@ -272,6 +275,8 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 		}
 		if !placedThisRound {
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
+				fmt.Println("rotated solutions:", rotatedSolutions)
+				fmt.Println("total solutions:", totalSolutions)
 				return solutions
 			}
 

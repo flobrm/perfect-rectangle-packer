@@ -18,6 +18,7 @@ type Tile struct {
 	CurH       int  `json:"-"`
 	Placed     bool `json:"-"`
 	Turned     bool `json:"T"`
+	Index      int  `json:"-"`
 }
 
 //NewTile initializes tile

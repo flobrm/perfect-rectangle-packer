@@ -194,6 +194,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	tiles := make([]tiling.Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = tiling.NewTile(tileDims[i].X, tileDims[i].Y)
+		tiles[i].Index = i
 	}
 	board := tiling.NewBoard(boardDims, tiles)
 	// solutions := make([][]tiling.Tile, 0) //random starting value

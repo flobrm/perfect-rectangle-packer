@@ -41,6 +41,13 @@ func (b *Board) Fits(tile Tile, turned bool) bool {
 		tile.Remove()
 		return false
 	}
+	//Check if the tile is a corner piece smaller than the lower left corner tile
+	if len(b.Tiles) > 0 && tile.Index < b.Tiles[0].Index {
+		corner := b.isCornerTile(&tile)
+		if corner != noCorner && corner != bottomLeftCorner {
+			return false
+		}
+	}
 
 	if b.lastCollision != nil && b.lastCollision.Placed {
 		if tile.collides(b.lastCollision) {

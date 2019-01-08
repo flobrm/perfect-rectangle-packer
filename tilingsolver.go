@@ -297,11 +297,11 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 			placedTileIndex = placedTileIndex[:len(placedTileIndex)-1]
 
 			//This only works if all tiles are smaller than both board sides
-			// if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
-			// 	if startIndex == len(tiles)-4 {
-			// 		return solutions
-			// 	}
-			// }
+			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
+				if startIndex == len(tiles)-4 {
+					return solutions
+				}
+			}
 		}
 	}
 }

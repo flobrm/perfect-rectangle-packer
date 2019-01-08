@@ -33,9 +33,15 @@ var backgroundColor = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 func SaveBoardPic(board Board, filePath string, scale int) {
 	pic := drawBoard(board, scale)
 	savePicture(pic, filePath)
-
 }
 
+//SavePicFromPuzzle doesn't need a full board, making it more flexible
+func SavePicFromPuzzle(boardDims Coord, tiles []Tile, filePath string, scale int) {
+	pic := drawPuzzle(boardDims, tiles, scale)
+	savePicture(pic, filePath)
+}
+
+//drawBoard draws all tiles and candidates in a board
 func drawBoard(board Board, scale int) *image.RGBA {
 	colorscheme := colorschemes["blues"]
 
@@ -55,6 +61,23 @@ func drawBoard(board Board, scale int) *image.RGBA {
 		drawCandidate(picture, cand, color.RGBA{R: 255, A: 255}, scale, height-1)
 	}
 
+	return picture
+}
+
+//drawPuzzle draws only tiles
+func drawPuzzle(boardDims Coord, tiles []Tile, scale int) *image.RGBA {
+	colorscheme := colorschemes["blues"]
+
+	width := boardDims.X*scale + 1
+	height := boardDims.Y*scale + 1
+	picture := image.NewRGBA(image.Rect(0, 0, width, height))
+	for i := range picture.Pix {
+		picture.Pix[i] = 255 //TODO actually set backgroundColor
+	}
+
+	for i, tile := range tiles {
+		drawTile(picture, tile, colorscheme[i%len(colorscheme)], scale, height-1)
+	}
 	return picture
 }
 

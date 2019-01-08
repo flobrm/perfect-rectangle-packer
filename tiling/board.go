@@ -199,15 +199,15 @@ func (b *Board) GetCanonicalSolution(tiles *[]Tile) {
 	var largestCornerTile *Tile
 	var largestCorner = bottomLeftCorner
 	//first determine what the largest corner is
-	for _, tile := range *tiles {
+	for i, tile := range *tiles {
 		corner := b.isCornerTile(&tile)
 		if corner != noCorner {
 			if largestCornerTile == nil {
-				largestCornerTile = &tile
+				largestCornerTile = &(*tiles)[i]
 				largestCorner = corner
 			} else if tile.W > largestCornerTile.W ||
 				tile.W == largestCornerTile.W && tile.Y > largestCornerTile.Y {
-				largestCornerTile = &tile
+				largestCornerTile = &(*tiles)[i]
 				largestCorner = corner
 			}
 		}

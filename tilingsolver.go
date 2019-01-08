@@ -58,8 +58,8 @@ func main() {
 	start := time.Now()
 
 	//solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
-	fmt.Print(len(solveAsQas8()))
-	// fmt.Print(len(solveTestCase()))
+	// fmt.Print(len(solveAsQas8()))
+	fmt.Print(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)
@@ -207,11 +207,11 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	step := 0
 
 	for {
-		// if step > 0 {
-		// 	fmt.Println("step: ", step)
-		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%06d.png", imgPath, step), 5)
-		// }
-		// if step >= 664 {
+		if step > 83141 && step < 85000 {
+			fmt.Println("step: ", step)
+			tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		}
+		// if step >= 1867505 {
 		// 	fmt.Println("start debugging here")
 		// }
 		// if step == 500 {
@@ -219,19 +219,20 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 		// }
 
 		if tilesPlaced == numTiles {
-			// if step == 45432021 {
+			// if step == 1867505 {
 			// 	fmt.Println("stop to check stuff")
 			// }
 			//TODO return if only 1 solution requested
-			// tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%06d.png", imgPath, step), 5)
+			// tiling.SaveBoardPic(board, fmt.Sprintf("%s%010dFirstSolution.png", imgPath, step), 5)
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
-			preLength := len(solutions)
+			// preLength := len(solutions)
 			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
-			if len(solutions) != preLength {
-				tiling.SaveBoardPic(board, fmt.Sprintf("%sSolution%010d.png", imgPath, step), 5)
-			}
+			// if len(solutions) != preLength {
+			// 	tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
+			// 	tiling.SavePicFromPuzzle(board.Size, newSolution, fmt.Sprintf("%s%010d_RotatedSolution.png", imgPath, step), 5)
+			// }
 			// solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}

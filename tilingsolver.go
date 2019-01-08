@@ -210,10 +210,10 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 	totalSolutions := 0
 
 	for {
-		if step > 83141 && step < 85000 {
-			fmt.Println("step: ", step)
-			tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		}
+		// if step > 83141 && step < 85000 {
+		// 	fmt.Println("step: ", step)
+		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		// }
 		// if step >= 1867505 {
 		// 	fmt.Println("start debugging here")
 		// }
@@ -230,12 +230,12 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 			newSolution := make([]tiling.Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
-			// preLength := len(solutions)
+			preLength := len(solutions)
 			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
-			// if len(solutions) != preLength {
-			// 	tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
-			// 	tiling.SavePicFromPuzzle(board.Size, newSolution, fmt.Sprintf("%s%010d_RotatedSolution.png", imgPath, step), 5)
-			// }
+			if len(solutions) != preLength {
+				// 	tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
+				// tiling.SavePicFromPuzzle(board.Size, newSolution, fmt.Sprintf("%s%010d_RotatedSolution.png", imgPath, step), 5)
+			}
 			// solutions = append(solutions, newSolution)
 			// fmt.Println("solution found")
 		}
@@ -248,7 +248,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
 				// fmt.Println("trying to fit tile", tiles[i])
-				if board.Fits(tiles[i], false) && startRotation == false { //place normal
+				if startRotation == false && board.Fits(tiles[i], false) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					board.PlaceTile(&tiles[i], false)
 					// fmt.Println("placed tile normal", board)
@@ -271,6 +271,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 					tilesPlaced++
 					break
 				}
+				startRotation = false
 			}
 		}
 		if !placedThisRound {

@@ -57,9 +57,9 @@ func main() {
 
 	start := time.Now()
 
-	//solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
 	// fmt.Print(len(solveAsQas8()))
-	fmt.Print(len(solveTestCase()))
+	// fmt.Print(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)

@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
 var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
@@ -57,9 +57,9 @@ func main() {
 
 	start := time.Now()
 
-	solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	// solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
 	// fmt.Print(len(solveAsQas8()))
-	// fmt.Print(len(solveTestCase()))
+	fmt.Println(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)
@@ -78,6 +78,7 @@ func main() {
 	}
 }
 
+// has 608 unique solutions
 func solveTestCase() map[string][]tiling.Tile {
 	board := tiling.Coord{X: 41, Y: 25}
 	tiles := make([]tiling.Coord, 11)

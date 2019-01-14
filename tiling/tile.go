@@ -21,6 +21,11 @@ type Tile struct {
 	Index      int  `json:"-"`
 }
 
+// TilePair is a way to store two pairs, and keep track of them
+type TilePair struct {
+	a, b *Tile
+}
+
 //NewTile initializes tile
 func NewTile(w, h int) (t Tile) {
 	t.W = w

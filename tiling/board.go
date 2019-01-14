@@ -5,6 +5,7 @@ type Board struct {
 	Size          Coord     //width and hight of the board
 	Tiles         [](*Tile) //All the placed tiles
 	Candidates    []Coord   //Candidate positions for next placement
+	board         [][]uint8 // first x then y
 	lastCollision *Tile
 }
 
@@ -12,10 +13,15 @@ type Board struct {
 func NewBoard(boardDims Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
 	candidates := append(make([]Coord, 0), Coord{X: 0, Y: 0})
+	board := make([][]uint8, boardDims.X)
+	for i := 0; i < len(board); i++ {
+		board[i] = make([]uint8, boardDims.Y)
+	}
 	return Board{
 		Size:       Coord{boardDims.X, boardDims.Y},
 		Tiles:      myTiles[:0],
-		Candidates: candidates}
+		Candidates: candidates,
+		board:      board}
 	//Candidates: make([]Coord, len(tiles)+1)}
 }
 
@@ -63,6 +69,16 @@ func (b *Board) Fits(tile Tile, turned bool) bool {
 			return false
 		}
 	}
+
+	// pair, isCanonical := b.getPair(&tile)
+	// if pair == nil {
+	// 	return true
+	// } else if isCanonical {
+
+	// } else {
+	// 	return false
+	// }
+
 	return true
 }
 
@@ -75,78 +91,112 @@ func (b *Board) tileFitsBoard(tile *Tile) bool {
 	return true
 }
 
+// // getPair checks if tile forms a larger rectangle with the tiles already placed on the board.
+// // It only returns the first found pair where the counter tile is not already part of a pair.
+// // isCanonical is true if the tile with the lower index is lower or more to the left
+// func (b *Board) getPair(tile *Tile) (pair *TilePair, isCanonical bool) {
+// 	for i = len(b.Tiles) - 1; i >= 0; i-- {
+// 		if isPair(tile, b.tiles[i]) {
+// 			if pairIsCanonical {
+// 				return
+// 			}
+// 		}
+// 	}
+
+// 	return pair, true
+// }
+
+// func isPair(a *Tile, b *Tile) bool {
+// 	return true
+// }
+
 //PlaceTile registers a tile as placed on the current spot to fill, Fits should be called first
 func (b *Board) PlaceTile(tile *Tile, turned bool) {
 	candIndex := len(b.Candidates) - 1
 	pos := b.Candidates[candIndex]
 	tile.Place(pos, turned)
+	b.putTileOnBoard(tile)
 	b.Candidates = b.Candidates[:candIndex] //remove last candidate
 	b.addCandidates(*tile)
 	b.Tiles = append(b.Tiles, tile)
 	//TODO store tile for easy removal
 }
 
-func (b *Board) addCandidates(tile Tile) {
-	newCands := tile.GetNeighborSpots()
+func (b *Board) putTileOnBoard(tile *Tile) {
+	index := uint8(len(b.Tiles) + 1)
+	tileTop := tile.Y + tile.CurH - 1
+	for x := tile.X; x < tile.X+tile.CurW; x++ {
+		b.board[x][tile.Y] = index
+		b.board[x][tileTop] = index
+	}
+	tileRightEdge := tile.X + tile.CurW - 1
+	for y := tile.Y + 1; y < tile.Y+tile.CurH-1; y++ {
+		b.board[tile.X][y] = index
+		b.board[tile.X][tileRightEdge] = index
+	}
+}
 
-	//first add the new one on top
-	//Only add this candidate if it's in a corner
-	//Assume it is empty, because we fill from bottom to top
-	if newCands[1].Y < b.Size.Y { //TODO check if position is free
-		if newCands[1].X == 0 { //corner with the wall
-			b.addCandidate(newCands[1])
-		} else { //check for corner with a tile on the left
-			collision, _ := b.posCollides(Coord{X: newCands[1].X - 1, Y: newCands[1].Y})
-			if collision {
-				b.addCandidate(newCands[1])
+func (b *Board) removeTileFromBoard(tile *Tile) {
+	index := uint8(0)
+	tileTop := tile.Y + tile.CurH - 1
+	for x := tile.X; x < tile.X+tile.CurW; x++ {
+		b.board[x][tile.Y] = index
+		b.board[x][tileTop] = index
+	}
+	tileRightEdge := tile.X + tile.CurW - 1
+	for y := tile.Y + 1; y < tile.Y+tile.CurH-1; y++ {
+		b.board[tile.X][y] = index
+		b.board[tile.X][tileRightEdge] = index
+	}
+}
+
+func (b *Board) addCandidates(tile Tile) {
+
+	//find top tile
+	candidateY := tile.Y + tile.CurH
+	if candidateY < b.Size.Y {
+		if tile.X == 0 { //left border counts as corner
+			b.addCandidate(Coord{X: 0, Y: candidateY})
+		} else if b.board[tile.X-1][candidateY] != 0 {
+			for x := tile.X; x < tile.X+tile.CurW; x++ {
+				if b.board[x][candidateY] != 0 {
+					b.addCandidate(Coord{X: x, Y: candidateY})
+					break
+				}
 			}
 		}
 	}
 
-	//then add new one on the right
-	if newCands[0].X < b.Size.X {
-		var lastCollision *Tile
-		// check for positions
-		maxY := newCands[0].Y + tile.CurH
-		for y := newCands[0].Y; y < maxY; y++ {
-			newCands[0].Y = y
-			//if there was a collision before, check if the same tile collides again
-			if lastCollision != nil {
-				if lastCollision.posCollides(&newCands[0]) {
-					continue
+	//find right tile
+	candidateX := tile.X + tile.CurW
+	if candidateX < b.Size.X {
+		if tile.Y == 0 { //always add candidate if tile on bottom
+			b.addCandidate(Coord{X: candidateX, Y: 0})
+		} else if b.board[candidateX][tile.Y-1] != 0 {
+			for y := tile.Y; y < tile.Y+tile.CurH; y++ {
+				if b.board[candidateX][y] != 0 {
+					b.addCandidate(Coord{X: candidateX, Y: y})
+					break
 				}
 			}
-			// no collision with last collider, check all tiles to be sure
-			collides, collider := b.posCollides(newCands[0])
-			lastCollision = collider
-			if collides {
-				continue
-			}
-			//no collisions, add it to candidates
-			b.addCandidate(newCands[0])
-			break
-			//b.Candidates = append(b.Candidates[:], newCands[0])
 		}
 	}
 }
 
 func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
-	collides = false
-	collider = nil
-	for _, tile := range b.Tiles {
-		if tile.posCollides(&pos) {
-			collider = tile
-			collides = true
-			return
-		}
+	collides = b.board[pos.X][pos.Y] != 0
+	if collides {
+		collider = b.Tiles[b.board[pos.X][pos.Y]-1]
+		return collides, collider
 	}
-	return
+	return collides, collider
 }
 
 //RemoveLastTile removes a tile and resets it's candidate positions
 func (b *Board) RemoveLastTile() *Tile {
 	tile := *b.Tiles[len(b.Tiles)-1]
 	b.removeCandidates(tile)
+	b.removeTileFromBoard(&tile)
 	b.addCandidate(Coord{tile.X, tile.Y})
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]

@@ -132,7 +132,7 @@ func (b *Board) putTileOnBoard(tile *Tile) {
 	tileRightEdge := tile.X + tile.CurW - 1
 	for y := tile.Y + 1; y < tile.Y+tile.CurH-1; y++ {
 		b.board[tile.X][y] = index
-		b.board[tile.X][tileRightEdge] = index
+		b.board[tileRightEdge][y] = index
 	}
 }
 
@@ -146,7 +146,7 @@ func (b *Board) removeTileFromBoard(tile *Tile) {
 	tileRightEdge := tile.X + tile.CurW - 1
 	for y := tile.Y + 1; y < tile.Y+tile.CurH-1; y++ {
 		b.board[tile.X][y] = index
-		b.board[tile.X][tileRightEdge] = index
+		b.board[tileRightEdge][y] = index
 	}
 }
 
@@ -159,7 +159,7 @@ func (b *Board) addCandidates(tile Tile) {
 			b.addCandidate(Coord{X: 0, Y: candidateY})
 		} else if b.board[tile.X-1][candidateY] != 0 {
 			for x := tile.X; x < tile.X+tile.CurW; x++ {
-				if b.board[x][candidateY] != 0 {
+				if b.board[x][candidateY] == 0 {
 					b.addCandidate(Coord{X: x, Y: candidateY})
 					break
 				}
@@ -174,7 +174,7 @@ func (b *Board) addCandidates(tile Tile) {
 			b.addCandidate(Coord{X: candidateX, Y: 0})
 		} else if b.board[candidateX][tile.Y-1] != 0 {
 			for y := tile.Y; y < tile.Y+tile.CurH; y++ {
-				if b.board[candidateX][y] != 0 {
+				if b.board[candidateX][y] == 0 {
 					b.addCandidate(Coord{X: candidateX, Y: y})
 					break
 				}

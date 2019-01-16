@@ -6,6 +6,7 @@ type Board struct {
 	Tiles         [](*Tile) //All the placed tiles
 	Candidates    []Coord   //Candidate positions for next placement
 	board         [][]uint8 // first x then y
+	pairs         [](*TilePair)
 	lastCollision *Tile
 }
 
@@ -21,8 +22,8 @@ func NewBoard(boardDims Coord, tiles []Tile) Board {
 		Size:       Coord{boardDims.X, boardDims.Y},
 		Tiles:      myTiles[:0],
 		Candidates: candidates,
-		board:      board}
-	//Candidates: make([]Coord, len(tiles)+1)}
+		board:      board,
+		pairs:      make([](*TilePair), len(tiles))[:0]}
 }
 
 func (b *Board) addCandidate(newCand Coord) {
@@ -38,18 +39,19 @@ func Min(a, b int) int {
 }
 
 //Fits checks if a tile fits the board at the next position to fill
-func (b *Board) Fits(tile Tile, turned bool) bool {
+//TODO merge with Place
+func (b *Board) Fits(tile *Tile, turned bool) bool {
 	// fmt.Println(tile)
 	candIndex := len(b.Candidates) - 1
 	pos := b.Candidates[candIndex]
 	tile.Place(pos, turned)
-	if !b.tileFitsBoard(&tile) {
+	if !b.tileFitsBoard(tile) {
 		tile.Remove()
 		return false
 	}
 	//Check if the tile is a corner piece smaller than the lower left corner tile
 	if len(b.Tiles) > 0 && tile.Index < b.Tiles[0].Index {
-		corner := b.isCornerTile(&tile)
+		corner := b.isCornerTile(tile)
 		if corner != noCorner && corner != bottomLeftCorner {
 			return false
 		}
@@ -70,16 +72,17 @@ func (b *Board) Fits(tile Tile, turned bool) bool {
 		}
 	}
 
-	// pair, isCanonical := b.getPair(&tile)
-	// if pair == nil {
-	// 	return true
-	// } else if isCanonical {
+	pair, isCanonical := b.getPair(tile)
+	if pair == nil {
+		return true
+	} else if isCanonical {
+		b.pairs = append(b.pairs, pair) //TODO perhaps in placeTile?
+		return true
+	} else {
+		return false
+	}
 
-	// } else {
-	// 	return false
-	// }
-
-	return true
+	// return true
 }
 
 //tileFitsBoard checks if the tile with it's internal rotation and position fits inside the board
@@ -91,24 +94,20 @@ func (b *Board) tileFitsBoard(tile *Tile) bool {
 	return true
 }
 
-// // getPair checks if tile forms a larger rectangle with the tiles already placed on the board.
-// // It only returns the first found pair where the counter tile is not already part of a pair.
-// // isCanonical is true if the tile with the lower index is lower or more to the left
-// func (b *Board) getPair(tile *Tile) (pair *TilePair, isCanonical bool) {
-// 	for i = len(b.Tiles) - 1; i >= 0; i-- {
-// 		if isPair(tile, b.tiles[i]) {
-// 			if pairIsCanonical {
-// 				return
-// 			}
-// 		}
-// 	}
-
-// 	return pair, true
-// }
-
-// func isPair(a *Tile, b *Tile) bool {
-// 	return true
-// }
+// getPair checks if tile forms a larger rectangle with the tiles already placed on the board.
+// It only returns the first found pair where the counter tile is not already part of a pair.
+// isCanonical is true if the tile with the lower index is lower or more to the left
+func (b *Board) getPair(tile *Tile) (*TilePair, bool) {
+	//check only last tile, assume last tile should be below or to the left
+	if len(b.Tiles) > 1 {
+		lastTile := b.Tiles[len(b.Tiles)-1]
+		if tile.Y == lastTile.Y && tile.CurH == lastTile.CurH && //same row and same height
+			lastTile.X+lastTile.CurW == tile.X { //lastTile is to the left of tile
+			return &TilePair{a: lastTile, b: tile}, lastTile.Index > tile.Index
+		}
+	}
+	return nil, false
+}
 
 //PlaceTile registers a tile as placed on the current spot to fill, Fits should be called first
 func (b *Board) PlaceTile(tile *Tile, turned bool) {
@@ -193,15 +192,25 @@ func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
 }
 
 //RemoveLastTile removes a tile and resets it's candidate positions
-func (b *Board) RemoveLastTile() *Tile {
+func (b *Board) RemoveLastTile() {
 	tile := *b.Tiles[len(b.Tiles)-1]
+	b.removeLastPair(&tile)
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
 	b.addCandidate(Coord{tile.X, tile.Y})
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
+}
 
-	return &tile
+func (b *Board) removeLastPair(tile *Tile) {
+	index := len(b.pairs) - 1
+	if index >= 0 {
+		if b.pairs[index].a.Index == tile.Index || b.pairs[index].b.Index == tile.Index {
+			b.pairs = b.pairs[:index]
+			// fmt.Println("removing")
+		}
+	}
+	// fmt.Println(len(b.pairs))
 }
 
 func (b *Board) removeCandidates(tile Tile) {
@@ -252,7 +261,7 @@ const (
 
 //GetCanonicalSolution returns a slice of tiles as placed on the current board
 //but flips the board so the corner with the largest tile is bottom right.
-func (b *Board) GetCanonicalSolution(tiles *[]Tile) int {
+func (b *Board) GetCanonicalSolution(tiles *[]Tile) int { //TODO fix to use grid
 	var largestCornerTile *Tile
 	var largestCorner = bottomLeftCorner
 	//first determine what the largest corner is

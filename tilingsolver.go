@@ -254,7 +254,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
 				// fmt.Println("trying to fit tile", tiles[i])
-				if startRotation == false && board.Fits(tiles[i], false) { //place normal
+				if startRotation == false && board.Fits(&tiles[i], false) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					board.PlaceTile(&tiles[i], false)
 					// fmt.Println("placed tile normal", board)
@@ -266,7 +266,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord) map[string][]ti
 					break
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
-				if board.Fits(tiles[i], true) { // place turned
+				if board.Fits(&tiles[i], true) { // place turned
 					// fmt.Println("fitting tile turned", tiles[i])
 					board.PlaceTile(&tiles[i], true)
 					// fmt.Println("placed tile turned", board)

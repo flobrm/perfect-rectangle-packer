@@ -19,7 +19,7 @@ import (
 
 //Open gets a database object
 func Open() *sql.DB {
-	connectstring := "tiler:tiler@(localhost:3306)/tiling"
+	connectstring := "tiler:tiler@(localhost:3306)/tiling" //_test"
 
 	db, err := sql.Open("mysql", connectstring)
 	if err != nil {
@@ -50,6 +50,7 @@ type puzzleRow struct {
 //Puzzle store important puzzle attributes as they are fetched from the database
 type Puzzle struct {
 	ID        int
+	JobID     int
 	NumTiles  int
 	BoardDims tiling.Coord
 	Tiles     *[]tiling.Coord
@@ -140,6 +141,7 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 	return puzzles, nil
 }
 
+//GetNewJobs is a function that returns puzzles
 func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 	//TODO random expo backoff
 
@@ -155,9 +157,9 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		numTilesQuery = fmt.Sprintf("and num_tiles =  %d ", numTiles)
 	}
 
-	query := fmt.Sprint("SELECT j.id, p.num_tiles, p.board_width, p.board_height, p.tiles, j.state_size, j.start_state, j.end_state FROM jobs j "+
+	query := fmt.Sprint("SELECT p.id, j.id, p.num_tiles, p.board_width, p.board_height, p.tiles, j.state_size, j.start_state, j.end_state FROM jobs j "+
 		" JOIN puzzles p on j.puzzle_id = p.id "+
-		" WHERE j.status = 'new' ", numTilesQuery, "LIMIT ?  FOR UPDATE")
+		" WHERE j.status = 'new' ", numTilesQuery, "ORDER BY j.id LIMIT ?  FOR UPDATE")
 	statement, err := transaction.Prepare(query)
 
 	result, err := statement.Query(numPuzzles)
@@ -174,7 +176,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		var startJSON []byte
 		var stopJSON []byte
 		var stateSize int
-		err = result.Scan(&puzzles[rowsRead].ID, &puzzles[rowsRead].NumTiles, &puzzles[rowsRead].BoardDims.X,
+		err = result.Scan(&puzzles[rowsRead].ID, &puzzles[rowsRead].JobID, &puzzles[rowsRead].NumTiles, &puzzles[rowsRead].BoardDims.X,
 			&puzzles[rowsRead].BoardDims.Y, &tileJSON, &stateSize, &startJSON, &stopJSON)
 		if err != nil {
 			log.Println("Error reading puzzle row:", err)
@@ -182,6 +184,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 			rowsRead--
 			continue
 		}
+		// fmt.Println(string(startJSON), string(stopJSON), string(tileJSON))
 		tiles := make([]tiling.Coord, puzzles[rowsRead].NumTiles)
 		start := make([]TilePlacement, stateSize)
 		stop := make([]TilePlacement, stateSize)
@@ -206,7 +209,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 	//Now start updating puzzles to 'busy'
 	ids := make([]string, len(puzzles))
 	for i, puzzle := range puzzles {
-		ids[i] = strconv.Itoa(puzzle.ID)
+		ids[i] = strconv.Itoa(puzzle.JobID)
 	}
 	idsString := strings.Join(ids, ",")
 	query = fmt.Sprintf("UPDATE jobs SET status = 'busy' WHERE id IN (%s)", idsString)
@@ -235,7 +238,7 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 
 	if len(*solutions) > 0 {
 		puzzleIDString := strconv.Itoa(puzzleID)
-		query := "INSERT IGNORE INTO tiling.solutions (puzzles_id, tiles_hash, tiles) VALUES "
+		query := "INSERT IGNORE INTO solutions (puzzles_id, tiles_hash, tiles) VALUES "
 		//TODO add key index to (puzzleId,tiles)
 		var values []interface{}
 		args := make([]string, len(*solutions))[:0]
@@ -261,7 +264,7 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 
 //MarkPuzzleSolved set the status to solved and updates the solver and duration
 func MarkPuzzleSolved(db *sql.DB, puzzleID int, solverID int, duration time.Duration) error {
-	query := "UPDATE tiling.puzzles SET status = 'solved', solver_id = ?, duration = ? WHERE id = ? "
+	query := "UPDATE puzzles SET status = 'solved', solver_id = ?, duration = ? WHERE id = ? "
 	_, err := db.Exec(query, solverID, duration.Nanoseconds(), puzzleID)
 	if err != nil {
 		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
@@ -270,10 +273,21 @@ func MarkPuzzleSolved(db *sql.DB, puzzleID int, solverID int, duration time.Dura
 	return nil
 }
 
-//MarkJobSolved set the status to solved and updates the solver and duration
-func MarkJobSolved(db *sql.DB, puzzleID int, solverID int, duration time.Duration) error {
-	query := "UPDATE tiling.jobs SET status = 'solved', solver_id = ?, duration = ? WHERE id = ? "
-	_, err := db.Exec(query, solverID, duration.Nanoseconds(), puzzleID)
+//MarkPuzzle set the status to solved and updates the solver and duration
+func MarkPuzzle(db *sql.DB, puzzleID int, solverID int, duration time.Duration, status string) error {
+	query := "UPDATE puzzles SET status = ?, solver_id = ?, duration = ? WHERE id = ? "
+	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), puzzleID)
+	if err != nil {
+		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
+		return errors.New("failedSolutionsUpdate")
+	}
+	return nil
+}
+
+//MarkJob set the status to solved and updates the solver and duration
+func MarkJob(db *sql.DB, jobID int, solverID int, duration time.Duration, status string) error {
+	query := "UPDATE jobs SET status = ?, solver_id = ?, duration = ? WHERE id = ? "
+	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), jobID)
 	if err != nil {
 		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
 		return errors.New("failedSolutionsUpdate")

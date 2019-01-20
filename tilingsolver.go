@@ -30,6 +30,9 @@ var puzzleLimit = flag.Int("puzzle_limit", 0, "Solve at most N puzzles")
 var batchSize = flag.Int("batch_size", 1, "How many puzzles should the program reserve at once")
 var solverID = flag.Int("solver_id", 0, "Used to differentiate between different solvers and hardware")
 
+//TODO add db string /db config file
+//TODO add flag to switch between jobs and puzzles
+
 func main() {
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
@@ -323,6 +326,9 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 			}
 		}
 		if step == 12857142857 { // && len(solutions) == 0 { //12,857,142,857 should be about 30 mins on my pc
+			fmt.Println("step:", step)
+			fmt.Println("indices:", placedTileIndex)
+			fmt.Println("tiles:", tiles)
 			return solutions, "interrupted"
 		}
 

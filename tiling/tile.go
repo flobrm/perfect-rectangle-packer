@@ -32,7 +32,7 @@ func NewTile(w, h int) (t Tile) {
 
 //Print is a Printer for Tile
 func (t Tile) String() string {
-	return fmt.Sprintf("Tile: %d, %d, Pos: %d, %d Rot: %t, Used: %t", t.W, t.H, t.X, t.Y, t.Turned, t.Placed)
+	return fmt.Sprintf("Tile: %d, %d, Pos: %d, %d Rot: %t, Used: %t, Idx: %d", t.W, t.H, t.X, t.Y, t.Turned, t.Placed, t.Index)
 }
 
 //Place sets the X, Y and rotation of a Tile and sets Placed to true

@@ -322,7 +322,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 				}
 			}
 		}
-		if step == 18857142857 { // && len(solutions) == 0 { //12,857,142,857 should be about 30 mins on my pc
+		if step == 12857142857 { // && len(solutions) == 0 { //12,857,142,857 should be about 30 mins on my pc
 			return solutions, "interrupted"
 		}
 

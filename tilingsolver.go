@@ -29,6 +29,8 @@ var numTiles = flag.Int("num_tiles", 0, "Solve only puzzles with this many tiles
 var puzzleLimit = flag.Int("puzzle_limit", 0, "Solve at most N puzzles")
 var batchSize = flag.Int("batch_size", 1, "How many puzzles should the program reserve at once")
 var solverID = flag.Int("solver_id", 0, "Used to differentiate between different solvers and hardware")
+var useJobs = flag.Bool("jobs", false, "If set solve jobs instead of full puzzles")
+var dbstring = flag.String("dbstring", "tiler:tiler@(localhost:3306)/tiling", "Database connection string")
 
 //TODO add db string /db config file
 //TODO add flag to switch between jobs and puzzles
@@ -60,8 +62,11 @@ func main() {
 
 	start := time.Now()
 
-	// solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
-	solveJobsFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	if *useJobs {
+		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID)
+	} else {
+		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID)
+	}
 	// fmt.Print(len(solveAsQas8()))
 	// fmt.Print(len(solveTestCase()))
 
@@ -161,8 +166,8 @@ func solveFromFile(filePath *string) {
 	log.Println("finished")
 }
 
-func solveFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverID int) {
-	db := tileio.Open()
+func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int) {
+	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
 	puzzlesSolved := 0
@@ -202,8 +207,8 @@ func solveFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverID in
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
-func solveJobsFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverID int) {
-	db := tileio.Open()
+func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int) {
+	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
 	puzzlesSolved := 0

@@ -18,9 +18,7 @@ import (
 )
 
 //Open gets a database object
-func Open() *sql.DB {
-	connectstring := "tiler:tiler@(localhost:3306)/tiling" //_test"
-
+func Open(connectstring string) *sql.DB {
 	db, err := sql.Open("mysql", connectstring)
 	if err != nil {
 		log.Println(err)

@@ -51,7 +51,7 @@ func main() {
 
 	if *solverID <= 0 {
 		fmt.Println("No, or illegal, solver_id specified")
-		// return //TODO reenable after debugging
+		return //TODO reenable after debugging
 	}
 
 	//TODO remove after debugging

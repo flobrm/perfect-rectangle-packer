@@ -60,8 +60,8 @@ func main() {
 
 	start := time.Now()
 
-	solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
-	// solveJobsFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	// solveFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
+	solveJobsFromDatabase(*numTiles, *puzzleLimit, *batchSize, *solverID)
 	// fmt.Print(len(solveAsQas8()))
 	// fmt.Print(len(solveTestCase()))
 
@@ -182,6 +182,7 @@ func solveFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverID in
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
 			log.Println(len(solutions), "solutions found for puzzle ", puzzle.ID)
+			// log.Println(status)
 
 			//insert solutions into db
 			err = tileio.InsertSolutions(db, puzzle.ID, &solutions)
@@ -222,8 +223,9 @@ func solveJobsFromDatabase(numTiles int, puzzleLimit int, batchSize int, solverI
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
 			log.Println(len(solutions), "solutions found for puzzle ", puzzle.ID)
+			// log.Println(status)
 
-			//insert solutions into db
+			// insert solutions into db
 			err = tileio.InsertSolutions(db, puzzle.ID, &solutions)
 			if err != nil {
 				log.Fatal(err)
@@ -262,8 +264,8 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 	startRotation := false
 	step := 0
 
-	rotatedSolutions := 0
-	totalSolutions := 0
+	// rotatedSolutions := 0
+	// totalSolutions := 0
 
 	//place startTiles
 	if start != nil { //TODO test what if nil, what if no fit, what if index out of bounds?
@@ -297,7 +299,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 	for {
 		// if step >= 0 { //&& step < 8500 {
 		// fmt.Println("step: ", step)
-		// tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
 		// }
 		// if step >= 1867505 {
 		// 	fmt.Println("start debugging here")
@@ -308,18 +310,18 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 
 		//check for stop conditions
 		if stop != nil {
-			if len(placedTileIndex) >= len(stop) {
+			if len(placedTileIndex) == len(stop) {
 				for i, placement := range stop {
 					if placedTileIndex[i] < placement.Idx {
 						break
 					}
 					if placedTileIndex[i] > placement.Idx ||
-						placedTileIndex[i] == placement.Idx && !placement.Rot && tiles[i].Turned {
+						placedTileIndex[i] == placement.Idx && !placement.Rot && tiles[placement.Idx].Turned {
 						// fmt.Println(step)
 						// fmt.Println(tiles)
 						// fmt.Println(stop)
 						// fmt.Println(placedTileIndex)
-						tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+						//tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
 						return solutions, "solved"
 					}
 				}
@@ -344,7 +346,10 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 			preLength := len(solutions)
 			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
 			if len(solutions) != preLength {
-				// 	tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
+				// fmt.Println("solution found:")
+				// fmt.Println(placedTileIndex)
+				// fmt.Println(tiles)
+				// tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
 				// tiling.SavePicFromPuzzle(board.Size, newSolution, fmt.Sprintf("%s%010d_RotatedSolution.png", imgPath, step), 5)
 			}
 			// solutions = append(solutions, newSolution)
@@ -387,8 +392,8 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 		}
 		if !placedThisRound {
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
-				fmt.Println("rotated solutions:", rotatedSolutions)
-				fmt.Println("total solutions:", totalSolutions)
+				// fmt.Println("rotated solutions:", rotatedSolutions)
+				// fmt.Println("total solutions:", totalSolutions)
 				return solutions, "solved"
 			}
 

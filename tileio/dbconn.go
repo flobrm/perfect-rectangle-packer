@@ -155,7 +155,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		numTilesQuery = fmt.Sprintf("and num_tiles =  %d ", numTiles)
 	}
 
-	query := fmt.Sprint("SELECT p.id, j.id, p.num_tiles, p.board_width, p.board_height, p.tiles, j.state_size, j.start_state, j.end_state FROM jobs j "+
+	query := fmt.Sprint("SELECT p.id, j.id, p.num_tiles, p.board_width, p.board_height, p.tiles, j.start_size, j.end_size, j.start_state, j.end_state FROM jobs j "+
 		" JOIN puzzles p on j.puzzle_id = p.id "+
 		" WHERE j.status = 'new' ", numTilesQuery, "ORDER BY j.id LIMIT ?  FOR UPDATE")
 	statement, err := transaction.Prepare(query)
@@ -173,9 +173,10 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		var tileJSON []byte
 		var startJSON []byte
 		var stopJSON []byte
-		var stateSize int
+		var startSize int
+		var endSize int
 		err = result.Scan(&puzzles[rowsRead].ID, &puzzles[rowsRead].JobID, &puzzles[rowsRead].NumTiles, &puzzles[rowsRead].BoardDims.X,
-			&puzzles[rowsRead].BoardDims.Y, &tileJSON, &stateSize, &startJSON, &stopJSON)
+			&puzzles[rowsRead].BoardDims.Y, &tileJSON, &startSize, &endSize, &startJSON, &stopJSON)
 		if err != nil {
 			log.Println("Error reading puzzle row:", err)
 			log.Println("skipping unknown puzzle")
@@ -184,8 +185,8 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		}
 		// fmt.Println(string(startJSON), string(stopJSON), string(tileJSON))
 		tiles := make([]tiling.Coord, puzzles[rowsRead].NumTiles)
-		start := make([]TilePlacement, stateSize)
-		stop := make([]TilePlacement, stateSize)
+		start := make([]TilePlacement, startSize)
+		stop := make([]TilePlacement, endSize) //TODO handle 0 length stop or start
 		err = json.Unmarshal(tileJSON, &tiles)
 		if err == nil {
 			err = json.Unmarshal(startJSON, &start)

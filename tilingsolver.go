@@ -31,6 +31,8 @@ var batchSize = flag.Int("batch_size", 1, "How many puzzles should the program r
 var solverID = flag.Int("solver_id", 0, "Used to differentiate between different solvers and hardware")
 var useJobs = flag.Bool("jobs", false, "If set solve jobs instead of full puzzles")
 var dbstring = flag.String("dbstring", "tiler:tiler@(localhost:3306)/tiling", "Database connection string")
+var processTimeout = flag.Int("process_timeout", 0, "Max time in seconds that the solver is allowed")
+var puzzleTimeout = flag.Int("puzzle_timeout", 0, "Max time before a puzzle/job is interrupted")
 
 //TODO add db string /db config file
 //TODO add flag to switch between jobs and puzzles
@@ -53,19 +55,19 @@ func main() {
 		fmt.Println("No, or illegal, solver_id specified")
 		return //TODO reenable after debugging
 	}
-
-	//TODO remove after debugging
-	// inputPath = &inputFile
-	// if *inputPath == "" {
-	// 	log.Fatal("No inputpath specified")
-	// }
+	if *processTimeout == 0 {
+		*processTimeout = 3600 * 24 * 365 // a year in seconds, could be any big number
+	}
+	if *puzzleTimeout == 0 {
+		*puzzleTimeout = 3600 * 24 * 365 // a year in seconds, could be any big number
+	}
 
 	start := time.Now()
 
 	if *useJobs {
-		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID)
+		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout)
 	} else {
-		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID)
+		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout)
 	}
 	// fmt.Print(len(solveAsQas8()))
 	// fmt.Print(len(solveTestCase()))
@@ -92,7 +94,7 @@ func solveTestCase() map[string][]tiling.Tile {
 	tiles := make([]tiling.Coord, 11)
 	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
 	json.Unmarshal(tileBytes, &tiles)
-	result, _, _ := solveNaive(board, tiles, nil, nil)
+	result, _, _ := solveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
@@ -102,7 +104,7 @@ func solveAsQas3() map[string][]tiling.Tile {
 	for i := range tiles {
 		tiles[2-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:], nil, nil)
+	result, _, _ := solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
@@ -112,7 +114,7 @@ func solveAsQas8() map[string][]tiling.Tile {
 	for i := range tiles {
 		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:], nil, nil)
+	result, _, _ := solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
@@ -122,7 +124,7 @@ func solveAsQas20() {
 	for i := range tiles {
 		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:], nil, nil)
+	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 }
 
 func solveFromFile(filePath *string) {
@@ -136,7 +138,7 @@ func solveFromFile(filePath *string) {
 	}
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
-		solutions, _, _ := solveNaive(puzzle.Board, *puzzle.Tiles, nil, nil)
+		solutions, _, _ := solveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
@@ -146,11 +148,13 @@ func solveFromFile(filePath *string) {
 	log.Println("finished")
 }
 
-func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int) {
+func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int, processTimeout int, puzzleTimeout int) {
 	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
 	puzzlesSolved := 0
+	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
+	fmt.Println(time.Now(), processEndTime)
 
 	for puzzleLimit == 0 || puzzlesSolved < puzzleLimit {
 		puzzles, err := tileio.GetNewPuzzles(db, batchSize, numTiles)
@@ -162,7 +166,14 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 		for _, puzzle := range puzzles {
 			log.Println("start solving puzzle", puzzle.ID)
 			solveStart := time.Now()
-			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil)
+			if solveStart.After(processEndTime) {
+				return
+			}
+			solveEnd := solveStart.Add(time.Duration(1000000000 * int64(puzzleTimeout)))
+			if processEndTime.Before(solveEnd) {
+				solveEnd = processEndTime
+			}
+			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
@@ -187,11 +198,12 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
-func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int) {
+func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int, processTimeout int, puzzleTimeout int) {
 	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
 	puzzlesSolved := 0
+	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
 
 	for puzzleLimit == 0 || puzzlesSolved < puzzleLimit {
 		puzzles, err := tileio.GetNewJobs(db, batchSize, numTiles) //TODO getJobs
@@ -203,7 +215,11 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 		for _, puzzle := range puzzles {
 			log.Println("start solving job", puzzle.JobID)
 			solveStart := time.Now()
-			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop)
+			solveEnd := solveStart.Add(time.Duration(1000000000 * int64(puzzleTimeout)))
+			if processEndTime.Before(solveEnd) {
+				solveEnd = processEndTime
+			}
+			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop, solveEnd)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
@@ -228,7 +244,8 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
-func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.TilePlacement, stop []tileio.TilePlacement) (map[string][]tiling.Tile, string, uint) {
+func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.TilePlacement,
+	stop []tileio.TilePlacement, endTime time.Time) (map[string][]tiling.Tile, string, uint) {
 	tiles := make([]tiling.Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = tiling.NewTile(tileDims[i].X, tileDims[i].Y)
@@ -313,10 +330,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 				}
 			}
 		}
-		if step == 12857142857 { // && len(solutions) == 0 { //12,857,142,857 should be about 30 mins on my pc
-			fmt.Println("step:", step)
-			fmt.Println("indices:", placedTileIndex)
-			fmt.Println("tiles:", tiles)
+		if time.Now().After(endTime) {
 			return solutions, "interrupted", totalTilesPlaced
 		}
 

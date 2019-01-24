@@ -236,7 +236,7 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 
 	if len(*solutions) > 0 {
 		puzzleIDString := strconv.Itoa(puzzleID)
-		query := "INSERT IGNORE INTO solutions (puzzles_id, tiles_hash, tiles) VALUES "
+		query := "INSERT IGNORE INTO solutions (puzzle_id, tiles_hash, tiles) VALUES "
 		//TODO add key index to (puzzleId,tiles)
 		var values []interface{}
 		args := make([]string, len(*solutions))[:0]
@@ -272,9 +272,9 @@ func MarkPuzzleSolved(db *sql.DB, puzzleID int, solverID int, duration time.Dura
 }
 
 //MarkPuzzle set the status to solved and updates the solver and duration
-func MarkPuzzle(db *sql.DB, puzzleID int, solverID int, duration time.Duration, status string) error {
-	query := "UPDATE puzzles SET status = ?, solver_id = ?, duration = ? WHERE id = ? "
-	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), puzzleID)
+func MarkPuzzle(db *sql.DB, puzzleID int, solverID int, duration time.Duration, status string, tilesPlaced uint) error {
+	query := "UPDATE puzzles SET status = ?, solver_id = ?, duration = ?, tiles_placed = ? WHERE id = ? "
+	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), tilesPlaced, puzzleID)
 	if err != nil {
 		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
 		return errors.New("failedSolutionsUpdate")
@@ -283,9 +283,9 @@ func MarkPuzzle(db *sql.DB, puzzleID int, solverID int, duration time.Duration, 
 }
 
 //MarkJob set the status to solved and updates the solver and duration
-func MarkJob(db *sql.DB, jobID int, solverID int, duration time.Duration, status string) error {
-	query := "UPDATE jobs SET status = ?, solver_id = ?, duration = ? WHERE id = ? "
-	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), jobID)
+func MarkJob(db *sql.DB, jobID int, solverID int, duration time.Duration, status string, tilesPlaced uint) error {
+	query := "UPDATE jobs SET status = ?, solver_id = ?, duration = ?, tiles_placed = ? WHERE id = ? "
+	_, err := db.Exec(query, status, solverID, duration.Nanoseconds(), tilesPlaced, jobID)
 	if err != nil {
 		log.Println("inserted all tiles, but failed updating puzzle status: ", err)
 		return errors.New("failedSolutionsUpdate")

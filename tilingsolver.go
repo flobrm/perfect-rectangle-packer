@@ -92,7 +92,7 @@ func solveTestCase() map[string][]tiling.Tile {
 	tiles := make([]tiling.Coord, 11)
 	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
 	json.Unmarshal(tileBytes, &tiles)
-	result, _ := solveNaive(board, tiles, nil, nil)
+	result, _, _ := solveNaive(board, tiles, nil, nil)
 	return result
 }
 
@@ -102,18 +102,8 @@ func solveAsQas3() map[string][]tiling.Tile {
 	for i := range tiles {
 		tiles[2-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _ := solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:], nil, nil)
+	result, _, _ := solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:], nil, nil)
 	return result
-	// for i := range solutions {
-	// 	board := tiling.NewBoard(tiling.Coord{X: 15, Y: 16}, solutions[i])
-	// 	boardTiles := make([]*tiling.Tile, len(solutions[i]))
-	// 	for j := range solutions[i] {
-	// 		boardTiles[j] = &solutions[i][j]
-	// 	}
-	// 	board.Tiles = boardTiles
-	// 	tiling.SaveBoardPic(board, fmt.Sprint("img/", i, ".png"), 5)
-	// 	fmt.Println(i, solutions[i])
-	// }
 }
 
 func solveAsQas8() map[string][]tiling.Tile {
@@ -122,18 +112,8 @@ func solveAsQas8() map[string][]tiling.Tile {
 	for i := range tiles {
 		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _ := solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:], nil, nil)
+	result, _, _ := solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:], nil, nil)
 	return result
-	// for i := range solutions {
-	// 	board := tiling.NewBoard(tiling.Coord{X: 15, Y: 16}, solutions[i])
-	// 	boardTiles := make([]*tiling.Tile, len(solutions[i]))
-	// 	for j := range solutions[i] {
-	// 		boardTiles[j] = &solutions[i][j]
-	// 	}
-	// 	board.Tiles = boardTiles
-	// 	tiling.SaveBoardPic(board, fmt.Sprint("img/", i, ".png"), 5)
-	// 	fmt.Println(i, solutions[i])
-	// }
 }
 
 func solveAsQas20() {
@@ -156,7 +136,7 @@ func solveFromFile(filePath *string) {
 	}
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
-		solutions, _ := solveNaive(puzzle.Board, *puzzle.Tiles, nil, nil)
+		solutions, _, _ := solveNaive(puzzle.Board, *puzzle.Tiles, nil, nil)
 		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
@@ -182,7 +162,7 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 		for _, puzzle := range puzzles {
 			log.Println("start solving puzzle", puzzle.ID)
 			solveStart := time.Now()
-			solutions, status := solveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil)
+			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
@@ -194,7 +174,7 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = tileio.MarkPuzzle(db, puzzle.ID, solverID, solveTime, status)
+			err = tileio.MarkPuzzle(db, puzzle.ID, solverID, solveTime, status, tilesPlaced)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -223,7 +203,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 		for _, puzzle := range puzzles {
 			log.Println("start solving job", puzzle.JobID)
 			solveStart := time.Now()
-			solutions, status := solveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop)
+			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
@@ -235,7 +215,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = tileio.MarkJob(db, puzzle.JobID, solverID, solveTime, status)
+			err = tileio.MarkJob(db, puzzle.JobID, solverID, solveTime, status, tilesPlaced)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -248,7 +228,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
-func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.TilePlacement, stop []tileio.TilePlacement) (map[string][]tiling.Tile, string) {
+func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.TilePlacement, stop []tileio.TilePlacement) (map[string][]tiling.Tile, string, uint) {
 	tiles := make([]tiling.Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = tiling.NewTile(tileDims[i].X, tileDims[i].Y)
@@ -268,6 +248,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 	startIndex := 0
 	startRotation := false
 	step := 0
+	totalTilesPlaced := uint(0)
 
 	// rotatedSolutions := 0
 	// totalSolutions := 0
@@ -327,7 +308,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 						// fmt.Println(stop)
 						// fmt.Println(placedTileIndex)
 						//tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-						return solutions, "solved"
+						return solutions, "solved", totalTilesPlaced
 					}
 				}
 			}
@@ -336,7 +317,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 			fmt.Println("step:", step)
 			fmt.Println("indices:", placedTileIndex)
 			fmt.Println("tiles:", tiles)
-			return solutions, "interrupted"
+			return solutions, "interrupted", totalTilesPlaced
 		}
 
 		if tilesPlaced == numTiles {
@@ -378,6 +359,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 					placedThisRound = true
 					placedTileIndex = append(placedTileIndex, i)
 					tilesPlaced++
+					totalTilesPlaced++
 					break
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
@@ -390,6 +372,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 					placedThisRound = true
 					placedTileIndex = append(placedTileIndex, i)
 					tilesPlaced++
+					totalTilesPlaced++
 					break
 				}
 				startRotation = false
@@ -399,7 +382,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
 				// fmt.Println("rotated solutions:", rotatedSolutions)
 				// fmt.Println("total solutions:", totalSolutions)
-				return solutions, "solved"
+				return solutions, "solved", totalTilesPlaced
 			}
 
 			//Remove the last tile and keep track of which tile to try next
@@ -420,7 +403,7 @@ func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.
 			//This only works if all tiles are smaller than both board sides
 			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
 				if doSkipLastStartTiles && startIndex == len(tiles)-4 {
-					return solutions, "solved"
+					return solutions, "solved", totalTilesPlaced
 				}
 			}
 		}

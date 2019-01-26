@@ -250,13 +250,19 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 			args = append(args, "(?,?,?)")
 		}
 
-		query += strings.Join(args, ",")
-		_, err := db.Exec(query, values...)
-		if err != nil {
-			log.Println("error inserting solutions: ", err)
-			log.Fatal("Giving up on all solutions")
-			//TODO return error
+		for limit := batchSize; limit < len(*solutions); limit += batchSize {
+			if limit > batchSize
+			argsPerRow := 3
+			batchSize := 4500
+			query += strings.Join(args, ",")
+			_, err := db.Exec(query, values...)
+			if err != nil {
+				log.Println("error inserting solutions: ", err)
+				log.Fatal("Giving up on all solutions")
+				//TODO return error
+			}
 		}
+
 	}
 	return nil
 }

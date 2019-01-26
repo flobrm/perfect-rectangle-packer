@@ -237,32 +237,41 @@ func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Ti
 
 	if len(*solutions) > 0 {
 		puzzleIDString := strconv.Itoa(puzzleID)
-		query := "INSERT IGNORE INTO solutions (puzzle_id, tiles_hash, tiles) VALUES "
 		//TODO add key index to (puzzleId,tiles)
 		var values []interface{}
-		args := make([]string, len(*solutions))[:0]
 
 		for key := range *solutions {
 			hasher := sha1.New()
 			hasher.Write([]byte(key))
 			hashString := hex.EncodeToString(hasher.Sum(nil))
 			values = append(values, puzzleIDString, hashString, key)
-			args = append(args, "(?,?,?)")
 		}
 
-		for limit := batchSize; limit < len(*solutions); limit += batchSize {
-			if limit > batchSize
-			argsPerRow := 3
-			batchSize := 4500
+		batchSize := 1500 * 3 //batchSize has to be a multiple of the number of values in a row
+		// start loop
+		for batchStart := 0; batchStart < len(values); batchStart += batchSize {
+			// get batch min and max
+			batchEnd := batchStart + batchSize
+			if batchEnd > len(values) {
+				batchEnd = len(values)
+			}
+			//get subarray of values
+			batchValues := values[batchStart:batchEnd]
+			//build query
+			query := "INSERT IGNORE INTO solutions (puzzle_id, tiles_hash, tiles) VALUES "
+			args := make([]string, len(batchValues)/3)[:0]
+			for row := 0; row < len(batchValues)/3; row++ {
+				args = append(args, "(?,?,?)")
+			}
+			//execute query
 			query += strings.Join(args, ",")
-			_, err := db.Exec(query, values...)
+			_, err := db.Exec(query, batchValues...)
 			if err != nil {
 				log.Println("error inserting solutions: ", err)
 				log.Fatal("Giving up on all solutions")
 				//TODO return error
 			}
 		}
-
 	}
 	return nil
 }

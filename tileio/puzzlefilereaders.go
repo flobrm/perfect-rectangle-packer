@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"localhost/flobrm/tilingsolver/tiling"
+	"localhost/flobrm/tilingsolver/core"
 	"log"
 	"os"
 	"strconv"
@@ -28,8 +28,8 @@ type PuzzleCSVReader struct {
 type PuzzleDescription struct {
 	ID    int
 	Batch int
-	Board tiling.Coord
-	Tiles *[]tiling.Coord
+	Board core.Coord
+	Tiles *[]core.Coord
 }
 
 //NewPuzzleCSVReader opens a csv file and return an object that will reader puzzles 1 by 1
@@ -72,7 +72,7 @@ func (r PuzzleCSVReader) NextPuzzle() (PuzzleDescription, error) {
 		}
 		fmt.Print(record)
 
-		tiles := make([]tiling.Coord, parseInt(record[r.header["num_tiles"]]))
+		tiles := make([]core.Coord, parseInt(record[r.header["num_tiles"]]))
 		err = json.Unmarshal([]byte(record[r.header["tiles"]]), &tiles)
 		if err != nil {
 			fmt.Println("error reading tiles at line:", r.lineNumber, "error:", err)
@@ -82,7 +82,7 @@ func (r PuzzleCSVReader) NextPuzzle() (PuzzleDescription, error) {
 		puzzle := PuzzleDescription{
 			ID:    parseInt(record[r.header["id"]]),
 			Batch: parseInt(record[r.header["batch"]]),
-			Board: tiling.Coord{
+			Board: core.Coord{
 				X: parseInt(record[r.header["board_width"]]),
 				Y: parseInt(record[r.header["board_height"]])},
 			Tiles: &tiles}

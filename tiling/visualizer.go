@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"localhost/flobrm/tilingsolver/core"
 	"log"
 	"os"
 )
@@ -36,7 +37,7 @@ func SaveBoardPic(board Board, filePath string, scale int) {
 }
 
 //SavePicFromPuzzle doesn't need a full board, making it more flexible
-func SavePicFromPuzzle(boardDims Coord, tiles []Tile, filePath string, scale int) {
+func SavePicFromPuzzle(boardDims core.Coord, tiles []Tile, filePath string, scale int) {
 	pic := drawPuzzle(boardDims, tiles, scale)
 	savePicture(pic, filePath)
 }
@@ -65,7 +66,7 @@ func drawBoard(board Board, scale int) *image.RGBA {
 }
 
 //drawPuzzle draws only tiles
-func drawPuzzle(boardDims Coord, tiles []Tile, scale int) *image.RGBA {
+func drawPuzzle(boardDims core.Coord, tiles []Tile, scale int) *image.RGBA {
 	colorscheme := colorschemes["blues"]
 
 	width := boardDims.X*scale + 1
@@ -82,7 +83,7 @@ func drawPuzzle(boardDims Coord, tiles []Tile, scale int) *image.RGBA {
 }
 
 //drawCandidate draws a dot in the middle of the field for a candidate
-func drawCandidate(picture *image.RGBA, cand Coord, color color.RGBA, scale int, height int) {
+func drawCandidate(picture *image.RGBA, cand core.Coord, color color.RGBA, scale int, height int) {
 	x := cand.X*scale + scale/2
 	y := height - (cand.Y*scale + scale/2)
 	picture.SetRGBA(x, y, color)
@@ -129,9 +130,9 @@ func savePicture(picture image.Image, filePath string) {
 //TestVisualizer is a temporary test function to build this thang
 func TestVisualizer() {
 
-	board := NewBoard(Coord{X: 16, Y: 15}, make([]Tile, 8)[:0])
+	board := NewBoard(core.Coord{X: 16, Y: 15}, make([]Tile, 8)[:0])
 	tileA := NewTile(9, 8)
-	tileA.Place(Coord{X: 0, Y: 1}, false)
+	tileA.Place(core.Coord{X: 0, Y: 1}, false)
 	board.PlaceTile(&tileA, false)
 
 	SaveBoardPic(board, "img/testpic.png", 10)

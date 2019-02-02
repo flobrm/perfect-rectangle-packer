@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"localhost/flobrm/tilingsolver/core"
 	"localhost/flobrm/tilingsolver/tileio"
 	"localhost/flobrm/tilingsolver/tiling"
 	"log"
@@ -34,9 +35,6 @@ var dbstring = flag.String("dbstring", "tiler:tiler@(localhost:3306)/tiling", "D
 var processTimeout = flag.Int("process_timeout", 0, "Max time in seconds that the solver is allowed")
 var puzzleTimeout = flag.Int("puzzle_timeout", 0, "Max time before a puzzle/job is interrupted")
 
-//TODO add db string /db config file
-//TODO add flag to switch between jobs and puzzles
-
 func main() {
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
@@ -53,7 +51,7 @@ func main() {
 
 	if *solverID <= 0 {
 		fmt.Println("No, or illegal, solver_id specified")
-		return //TODO reenable after debugging
+		return
 	}
 	if *processTimeout == 0 {
 		*processTimeout = 3600 * 24 * 365 // a year in seconds, could be any big number
@@ -89,42 +87,42 @@ func main() {
 	}
 }
 
-func solveTestCase() map[string][]tiling.Tile {
-	board := tiling.Coord{X: 41, Y: 25}
-	tiles := make([]tiling.Coord, 11)
+func solveTestCase() map[string]int {
+	board := core.Coord{X: 41, Y: 25}
+	tiles := make([]core.Coord, 11)
 	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
 	json.Unmarshal(tileBytes, &tiles)
-	result, _, _ := solveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
+	result, _, _ := tiling.SolveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
-func solveAsQas3() map[string][]tiling.Tile {
+func solveAsQas3() map[string]int {
 	// build asqas 3
-	var tiles [3]tiling.Coord
+	var tiles [3]core.Coord
 	for i := range tiles {
-		tiles[2-i] = tiling.Coord{X: i + 2, Y: i + 1}
+		tiles[2-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := solveNaive(tiling.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
+	result, _, _ := tiling.SolveNaive(core.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
-func solveAsQas8() map[string][]tiling.Tile {
+func solveAsQas8() map[string]int {
 	// build asqas 8
-	var tiles [8]tiling.Coord
+	var tiles [8]core.Coord
 	for i := range tiles {
-		tiles[7-i] = tiling.Coord{X: i + 2, Y: i + 1}
+		tiles[7-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := solveNaive(tiling.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
+	result, _, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 	return result
 }
 
 func solveAsQas20() {
 	// build asqas 20
-	var tiles [20]tiling.Coord
+	var tiles [20]core.Coord
 	for i := range tiles {
-		tiles[19-i] = tiling.Coord{X: i + 2, Y: i + 1}
+		tiles[19-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	solveNaive(tiling.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
+	tiling.SolveNaive(core.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 }
 
 func solveFromFile(filePath *string) {
@@ -138,7 +136,7 @@ func solveFromFile(filePath *string) {
 	}
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
-		solutions, _, _ := solveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
+		solutions, _, _ := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)))
 		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
@@ -146,6 +144,20 @@ func solveFromFile(filePath *string) {
 		}
 	}
 	log.Println("finished")
+}
+
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }
 
 func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int, processTimeout int, puzzleTimeout int) {
@@ -173,12 +185,14 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 			if processEndTime.Before(solveEnd) {
 				solveEnd = processEndTime
 			}
-			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd)
+			solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
 			log.Println(len(solutions), "solutions found for puzzle ", puzzle.ID)
 			// log.Println(status)
+
+			PrintMemUsage()
 
 			//insert solutions into db
 			err = tileio.InsertSolutions(db, puzzle.ID, &solutions)
@@ -190,6 +204,9 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 				log.Fatal(err)
 			}
 			puzzlesSolved++
+			solutions = nil
+			runtime.GC()
+			PrintMemUsage()
 		}
 		if len(puzzles) < batchSize {
 			break
@@ -206,7 +223,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
 
 	for puzzleLimit == 0 || puzzlesSolved < puzzleLimit {
-		puzzles, err := tileio.GetNewJobs(db, batchSize, numTiles) //TODO getJobs
+		puzzles, err := tileio.GetNewJobs(db, batchSize, numTiles)
 		if err != nil {
 			log.Println(err)
 			log.Fatal("whatever")
@@ -219,7 +236,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 			if processEndTime.Before(solveEnd) {
 				solveEnd = processEndTime
 			}
-			solutions, status, tilesPlaced := solveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop, solveEnd)
+			solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop, solveEnd)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
@@ -242,184 +259,4 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 		}
 	}
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
-}
-
-func solveNaive(boardDims tiling.Coord, tileDims []tiling.Coord, start []tileio.TilePlacement,
-	stop []tileio.TilePlacement, endTime time.Time) (map[string][]tiling.Tile, string, uint) {
-	tiles := make([]tiling.Tile, len(tileDims))
-	for i := range tileDims {
-		tiles[i] = tiling.NewTile(tileDims[i].X, tileDims[i].Y)
-		tiles[i].Index = i
-	}
-	board := tiling.NewBoard(boardDims, tiles)
-	// solutions := make([][]tiling.Tile, 0) //random starting value
-	solutions := make(map[string][]tiling.Tile, 0)
-
-	// Only skip the last 3 start tiles only if we have to use a separate tile for each corner
-	// aka only if the largest side of the largest tile is smaller than the smallest side of the board.
-	doSkipLastStartTiles := boardDims.Y > tileDims[0].X
-
-	placedTileIndex := make([]int, len(tileDims))[:0] //keeps track of which tiles are currently placed in which order
-	tilesPlaced := 0
-	numTiles := len(tiles)
-	startIndex := 0
-	startRotation := false
-	step := 0
-	totalTilesPlaced := uint(0)
-
-	// rotatedSolutions := 0
-	// totalSolutions := 0
-
-	//place startTiles
-	if start != nil { //TODO test what if nil, what if no fit, what if index out of bounds?
-		for _, placement := range start {
-			if board.Fits(tiles[placement.Idx], placement.Rot) {
-				board.PlaceTile(&tiles[placement.Idx], placement.Rot)
-				tilesPlaced++
-				placedTileIndex = append(placedTileIndex, placement.Idx)
-			} else {
-				if !placement.Rot {
-					startIndex = placement.Idx
-					startRotation = true
-				} else {
-					startIndex = placement.Idx + 1
-					startRotation = false
-				}
-				break
-			}
-		}
-	}
-	//check if stopTiles is legit
-	if stop != nil {
-		for _, placement := range stop {
-			if placement.Idx >= len(tiles) {
-				stop = nil
-				break
-			}
-		}
-	}
-
-	for {
-		// if step >= 0 { //&& step < 8500 {
-		// fmt.Println("step: ", step)
-		// 	tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		// }
-		// if step >= 1867505 {
-		// 	fmt.Println("start debugging here")
-		// }
-		// if step == 500 {
-		// 	return solutions
-		// }
-
-		//check for stop conditions
-		if stop != nil {
-			if len(placedTileIndex) == len(stop) {
-				for i, placement := range stop {
-					if placedTileIndex[i] < placement.Idx {
-						break
-					}
-					if placedTileIndex[i] > placement.Idx ||
-						placedTileIndex[i] == placement.Idx && !placement.Rot && tiles[placement.Idx].Turned {
-						// fmt.Println(step)
-						// fmt.Println(tiles)
-						// fmt.Println(stop)
-						// fmt.Println(placedTileIndex)
-						//tiling.SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-						return solutions, "solved", totalTilesPlaced
-					}
-				}
-			}
-		}
-		if time.Now().After(endTime) {
-			return solutions, "interrupted", totalTilesPlaced
-		}
-
-		if tilesPlaced == numTiles {
-			// if step == 1867505 {
-			// 	fmt.Println("stop to check stuff")
-			// }
-			//TODO return if only 1 solution requested
-			// tiling.SaveBoardPic(board, fmt.Sprintf("%s%010dFirstSolution.png", imgPath, step), 5)
-			newSolution := make([]tiling.Tile, numTiles)
-			copy(newSolution, tiles)
-			board.GetCanonicalSolution(&newSolution)
-			preLength := len(solutions)
-			solutions[tiling.TileSliceToJSON(newSolution)] = newSolution
-			if len(solutions) != preLength {
-				// fmt.Println("solution found:")
-				// fmt.Println(placedTileIndex)
-				// fmt.Println(tiles)
-				// tiling.SaveBoardPic(board, fmt.Sprintf("%s%010d_Solution.png", imgPath, step), 5)
-				// tiling.SavePicFromPuzzle(board.Size, newSolution, fmt.Sprintf("%s%010d_RotatedSolution.png", imgPath, step), 5)
-			}
-			// solutions = append(solutions, newSolution)
-			// fmt.Println("solution found")
-		}
-		step++
-
-		// fmt.Print("starting new round\n\n")
-		// fmt.Println(board)
-
-		placedThisRound := false //Is this still necessary? we break after placing a tile
-		for i := startIndex; i < len(tiles); i++ {
-			if !tiles[i].Placed {
-				// fmt.Println("trying to fit tile", tiles[i])
-				if startRotation == false && board.Fits(tiles[i], false) { //place normal
-					// fmt.Println("fitting tile normal", tiles[i])
-					board.PlaceTile(&tiles[i], false)
-					// fmt.Println("placed tile normal", board)
-					startIndex = 0
-					startRotation = false
-					placedThisRound = true
-					placedTileIndex = append(placedTileIndex, i)
-					tilesPlaced++
-					totalTilesPlaced++
-					break
-				}
-				// fmt.Println("trying to fit tile turned", tiles[i])
-				if board.Fits(tiles[i], true) { // place turned
-					// fmt.Println("fitting tile turned", tiles[i])
-					board.PlaceTile(&tiles[i], true)
-					// fmt.Println("placed tile turned", board)
-					startIndex = 0
-					startRotation = false
-					placedThisRound = true
-					placedTileIndex = append(placedTileIndex, i)
-					tilesPlaced++
-					totalTilesPlaced++
-					break
-				}
-				startRotation = false
-			}
-		}
-		if !placedThisRound {
-			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
-				// fmt.Println("rotated solutions:", rotatedSolutions)
-				// fmt.Println("total solutions:", totalSolutions)
-				return solutions, "solved", totalTilesPlaced
-			}
-
-			//Remove the last tile and keep track of which tile to try next
-			// fmt.Println("REMOVING tile", tiles[placedTileIndex[len(placedTileIndex)-1]])
-			tilesPlaced--
-			board.RemoveLastTile()
-			tiles[placedTileIndex[len(placedTileIndex)-1]].Remove()
-			// fmt.Println(board)
-			if !tiles[placedTileIndex[len(placedTileIndex)-1]].Turned {
-				startIndex = placedTileIndex[len(placedTileIndex)-1]
-				startRotation = true
-			} else {
-				startIndex = placedTileIndex[len(placedTileIndex)-1] + 1
-				startRotation = false
-			}
-			placedTileIndex = placedTileIndex[:len(placedTileIndex)-1]
-
-			//This only works if all tiles are smaller than both board sides
-			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
-				if doSkipLastStartTiles && startIndex == len(tiles)-4 {
-					return solutions, "solved", totalTilesPlaced
-				}
-			}
-		}
-	}
 }

@@ -1,25 +1,27 @@
 package tiling
 
+import "localhost/flobrm/tilingsolver/core"
+
 //Board stores the board and everything placed on it
 type Board struct {
-	Size          Coord     //width and hight of the board
-	Tiles         [](*Tile) //All the placed tiles
-	Candidates    []Coord   //Candidate positions for next placement
+	Size          core.Coord   //width and hight of the board
+	Tiles         [](*Tile)    //All the placed tiles
+	Candidates    []core.Coord //Candidate positions for next placement
 	lastCollision *Tile
 }
 
 //NewBoard inits a board, including candidates
-func NewBoard(boardDims Coord, tiles []Tile) Board {
+func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
-	candidates := append(make([]Coord, 0), Coord{X: 0, Y: 0})
+	candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
 	return Board{
-		Size:       Coord{boardDims.X, boardDims.Y},
+		Size:       core.Coord{X: boardDims.X, Y: boardDims.Y},
 		Tiles:      myTiles[:0],
 		Candidates: candidates}
-	//Candidates: make([]Coord, len(tiles)+1)}
+	//Candidates: make([]core.Coord, len(tiles)+1)}
 }
 
-func (b *Board) addCandidate(newCand Coord) {
+func (b *Board) addCandidate(newCand core.Coord) {
 	b.Candidates = append(b.Candidates, newCand)
 }
 
@@ -83,7 +85,6 @@ func (b *Board) PlaceTile(tile *Tile, turned bool) {
 	b.Candidates = b.Candidates[:candIndex] //remove last candidate
 	b.addCandidates(*tile)
 	b.Tiles = append(b.Tiles, tile)
-	//TODO store tile for easy removal
 }
 
 func (b *Board) addCandidates(tile Tile) {
@@ -96,7 +97,7 @@ func (b *Board) addCandidates(tile Tile) {
 		if newCands[1].X == 0 { //corner with the wall
 			b.addCandidate(newCands[1])
 		} else { //check for corner with a tile on the left
-			collision, _ := b.posCollides(Coord{X: newCands[1].X - 1, Y: newCands[1].Y})
+			collision, _ := b.posCollides(core.Coord{X: newCands[1].X - 1, Y: newCands[1].Y})
 			if collision {
 				b.addCandidate(newCands[1])
 			}
@@ -130,7 +131,7 @@ func (b *Board) addCandidates(tile Tile) {
 	}
 }
 
-func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
+func (b *Board) posCollides(pos core.Coord) (collides bool, collider *Tile) {
 	collides = false
 	collider = nil
 	for _, tile := range b.Tiles {
@@ -147,7 +148,7 @@ func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
 func (b *Board) RemoveLastTile() *Tile {
 	tile := *b.Tiles[len(b.Tiles)-1]
 	b.removeCandidates(tile)
-	b.addCandidate(Coord{tile.X, tile.Y})
+	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
 
@@ -171,7 +172,7 @@ func (b *Board) removeCandidates(tile Tile) {
 	}
 }
 
-func isRightCandidate(cand Coord, tile Tile) bool {
+func isRightCandidate(cand core.Coord, tile Tile) bool {
 	if cand.X == tile.X+tile.CurW {
 		if cand.Y >= tile.Y && cand.Y < tile.Y+tile.CurH {
 			return true
@@ -180,7 +181,7 @@ func isRightCandidate(cand Coord, tile Tile) bool {
 	return false
 }
 
-func isTopCandidate(cand Coord, tile Tile) bool {
+func isTopCandidate(cand core.Coord, tile Tile) bool {
 	if cand.Y == tile.Y+tile.CurH {
 		if cand.X >= tile.X && cand.X < tile.X+tile.CurW {
 			return true

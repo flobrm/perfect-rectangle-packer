@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"localhost/flobrm/tilingsolver/tiling"
+	"localhost/flobrm/tilingsolver/core"
 	"log"
 	"strconv"
 	"strings"
@@ -50,16 +50,10 @@ type Puzzle struct {
 	ID        int
 	JobID     int
 	NumTiles  int
-	BoardDims tiling.Coord
-	Tiles     *[]tiling.Coord
-	Start     *[]TilePlacement
-	Stop      *[]TilePlacement
-}
-
-//TilePlacement store an index and rotation of a tile in a puzzle
-type TilePlacement struct {
-	Idx int  //Tile index
-	Rot bool //false is flat, true is upright
+	BoardDims core.Coord
+	Tiles     *[]core.Coord
+	Start     *[]core.TilePlacement
+	Stop      *[]core.TilePlacement
 }
 
 //GetNewPuzzles returns
@@ -101,7 +95,7 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 			rowsRead--
 			continue
 		}
-		tiles := make([]tiling.Coord, puzzles[rowsRead].NumTiles)
+		tiles := make([]core.Coord, puzzles[rowsRead].NumTiles)
 		err = json.Unmarshal(tileJSON, &tiles)
 		if err != nil {
 			log.Println("Error reading tiles json:", err)
@@ -110,7 +104,7 @@ func GetNewPuzzles(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		}
 		puzzles[rowsRead].Tiles = &tiles
 	}
-	puzzles = puzzles[:rowsRead] //TODO check off by one error
+	puzzles = puzzles[:rowsRead]
 
 	//Now start updating puzzles to 'busy'
 	ids := make([]string, len(puzzles))
@@ -184,9 +178,9 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 			continue
 		}
 		// fmt.Println(string(startJSON), string(stopJSON), string(tileJSON))
-		tiles := make([]tiling.Coord, puzzles[rowsRead].NumTiles)
-		start := make([]TilePlacement, startSize)
-		stop := make([]TilePlacement, endSize) //TODO handle 0 length stop or start
+		tiles := make([]core.Coord, puzzles[rowsRead].NumTiles)
+		start := make([]core.TilePlacement, startSize)
+		stop := make([]core.TilePlacement, endSize) //TODO handle 0 length stop or start
 		err = json.Unmarshal(tileJSON, &tiles)
 		if err == nil {
 			err = json.Unmarshal(startJSON, &start)
@@ -203,7 +197,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 		puzzles[rowsRead].Start = &start
 		puzzles[rowsRead].Stop = &stop
 	}
-	puzzles = puzzles[:rowsRead] //TODO check off by one error
+	puzzles = puzzles[:rowsRead]
 
 	//Now start updating puzzles to 'busy'
 	ids := make([]string, len(puzzles))
@@ -233,7 +227,7 @@ func GetNewJobs(db *sql.DB, numPuzzles int, numTiles int) ([]Puzzle, error) {
 }
 
 // InsertSolutions adds solutions as json to the solutions table
-func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string][]tiling.Tile) error {
+func InsertSolutions(db *sql.DB, puzzleID int, solutions *map[string]int) error {
 
 	if len(*solutions) > 0 {
 		puzzleIDString := strconv.Itoa(puzzleID)

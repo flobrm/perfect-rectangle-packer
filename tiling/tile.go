@@ -3,12 +3,8 @@ package tiling
 import (
 	"encoding/json"
 	"fmt"
+	"localhost/flobrm/tilingsolver/core"
 )
-
-//Coord type to store an integer vector in
-type Coord struct {
-	X, Y int
-}
 
 /*Tile is a puzzle piece
  */
@@ -36,7 +32,7 @@ func (t Tile) String() string {
 }
 
 //Place sets the X, Y and rotation of a Tile and sets Placed to true
-func (t *Tile) Place(spot Coord, turned bool) {
+func (t *Tile) Place(spot core.Coord, turned bool) {
 	t.X = spot.X
 	t.Y = spot.Y
 	t.Turned = turned
@@ -57,14 +53,14 @@ func (t *Tile) Remove() {
 }
 
 //GetNeighborSpots returns the positions bottomright and topleft of the tile (in that order)
-func (t Tile) GetNeighborSpots() []Coord {
-	spots := [2]Coord{
-		Coord{X: t.X + t.CurW, Y: t.Y},
-		Coord{X: t.X, Y: t.Y + t.CurH}}
+func (t Tile) GetNeighborSpots() []core.Coord {
+	spots := [2]core.Coord{
+		core.Coord{X: t.X + t.CurW, Y: t.Y},
+		core.Coord{X: t.X, Y: t.Y + t.CurH}}
 	return spots[:]
 }
 
-func (t *Tile) collides(b *Tile) bool { //TODO pass by reference if necessary for speed
+func (t *Tile) collides(b *Tile) bool {
 	if t.X >= b.X+b.CurW || b.X >= t.X+t.CurW {
 		return false
 	}
@@ -74,7 +70,7 @@ func (t *Tile) collides(b *Tile) bool { //TODO pass by reference if necessary fo
 	return true
 }
 
-func (t *Tile) posCollides(pos *Coord) bool {
+func (t *Tile) posCollides(pos *core.Coord) bool {
 	if pos.X < t.X || pos.X >= t.X+t.CurW {
 		return false
 	}
@@ -104,6 +100,6 @@ func (t *Tile) posCollides(pos *Coord) bool {
 
 //TileSliceToJSON returns a JSON string encoding the width, height, and positioning data of a tile
 func TileSliceToJSON(tiles []Tile) string {
-	result, _ := json.Marshal(tiles) //TODO don't ignore error //TODO remove curw, curh
+	result, _ := json.Marshal(tiles) //TODO don't ignore error
 	return string(result)
 }

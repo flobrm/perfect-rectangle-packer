@@ -34,7 +34,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 
 	//place startTiles
 	if start != nil { //TODO test what if nil, what if no fit, what if index out of bounds?
-		if doSkipLastStartTiles && start[0].Idx >= len(tiles)-4 { //check if early exit is possible for this job
+		if doSkipLastStartTiles && start[0].Idx > len(tiles)-4 { //check if early exit is possible for this job
 			return solutions, "solved", totalTilesPlaced
 		}
 		for _, placement := range start {
@@ -180,7 +180,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 
 			//This only works if all tiles are smaller than both board sides
 			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
-				if doSkipLastStartTiles && startIndex == len(tiles)-4 {
+				if doSkipLastStartTiles && startIndex > len(tiles)-4 {
 					return solutions, "solved", totalTilesPlaced
 				}
 			}

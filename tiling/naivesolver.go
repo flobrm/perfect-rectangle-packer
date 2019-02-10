@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// SolveNaive is a depth first solver without many clever optimizations
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
 	stop []core.TilePlacement, endTime time.Time) (map[string]int, string, uint) {
 	tiles := make([]Tile, len(tileDims))
@@ -16,7 +17,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	// solutions := make([][]Tile, 0) //random starting value
 	solutions := make(map[string]int, 0)
 
-	// Only skip the last 3 start tiles only if we have to use a separate tile for each corner
+	// Only skip the last 3 start tiles if we have to use a separate tile for each corner
 	// aka only if the largest side of the largest tile is smaller than the smallest side of the board.
 	doSkipLastStartTiles := boardDims.Y > tileDims[0].X
 
@@ -33,6 +34,9 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 
 	//place startTiles
 	if start != nil { //TODO test what if nil, what if no fit, what if index out of bounds?
+		if doSkipLastStartTiles && start[0].Idx >= len(tiles)-4 { //check if early exit is possible for this job
+			return solutions, "solved", totalTilesPlaced
+		}
 		for _, placement := range start {
 			if board.Fits(tiles[placement.Idx], placement.Rot) {
 				board.PlaceTile(&tiles[placement.Idx], placement.Rot)

@@ -33,6 +33,7 @@ type PuzzleDescription struct {
 }
 
 //NewPuzzleCSVReader opens a csv file and return an object that will reader puzzles 1 by 1
+//TODO make it read the whole file at once, so it can close the file again
 func NewPuzzleCSVReader(path string) PuzzleReader {
 	file, err := os.Open(path)
 	if err != nil {

@@ -35,6 +35,10 @@ var dbstring = flag.String("dbstring", "tiler:tiler@(localhost:3306)/tiling", "D
 var processTimeout = flag.Int("process_timeout", 0, "Max time in seconds that the solver is allowed")
 var puzzleTimeout = flag.Int("puzzle_timeout", 0, "Max time before a puzzle/job is interrupted")
 
+var numSolvers = flag.Int("workers", 1, "number of worker threads")
+var processID = flag.String("processID", "1", "An identifier to be able to recognize output from multiple processes")
+var jobsFile = flag.String("inputFile", "", "File with puzzles/jobs")
+
 func main() {
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
@@ -52,7 +56,7 @@ func main() {
 	if *solverID <= 0 {
 		fmt.Println("No, or illegal, solver_id specified")
 		return
-	}
+	} //TODO check more input
 	if *processTimeout == 0 {
 		*processTimeout = 3600 * 24 * 365 // a year in seconds, could be any big number
 	}
@@ -61,6 +65,10 @@ func main() {
 	}
 
 	start := time.Now()
+
+	if *jobsFile != "" {
+		jobs = tileio.NewPuzzleCSVReader
+	}
 
 	if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout)

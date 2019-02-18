@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"localhost/flobrm/tilingsolver/core"
 	"localhost/flobrm/tilingsolver/tileio"
 	"localhost/flobrm/tilingsolver/tiling"
@@ -20,7 +21,7 @@ var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 // var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
-var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
+// var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -67,10 +68,11 @@ func main() {
 	start := time.Now()
 
 	if *jobsFile != "" {
-		jobs = tileio.NewPuzzleCSVReader
-	}
-
-	if *useJobs {
+		taskReader := tileio.NewPuzzleCSVReader(*jobsFile)
+		//TODO setup output stuff, for now print to output
+		//outputer
+		solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout)
+	} else if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout)
 	} else {
 		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout)
@@ -93,6 +95,19 @@ func main() {
 		}
 		f.Close()
 	}
+}
+
+func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int) {
+	//TODO timekeeping
+
+	for puzzle, err := tasks.NextPuzzle(); err != io.EOF; puzzle, err = tasks.NextPuzzle() {
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Println(puzzle) //TODO a lot of stuff
+	}
+	log.Println("finished all puzzles")
 }
 
 func solveTestCase() map[string]int {

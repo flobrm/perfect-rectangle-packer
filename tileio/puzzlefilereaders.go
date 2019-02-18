@@ -26,10 +26,12 @@ type PuzzleCSVReader struct {
 
 //PuzzleDescription describes a tiling puzzle
 type PuzzleDescription struct {
-	ID    int
-	Batch int
-	Board core.Coord
-	Tiles *[]core.Coord
+	JobID    int
+	PuzzleID int
+	Board    core.Coord
+	Tiles    *[]core.Coord
+	Start    *[]core.TilePlacement
+	End      *[]core.TilePlacement
 }
 
 //NewPuzzleCSVReader opens a csv file and return an object that will reader puzzles 1 by 1
@@ -45,7 +47,7 @@ func NewPuzzleCSVReader(path string) PuzzleReader {
 	}
 	csvReader.TrimLeadingSpace = true
 
-	header := make(map[string]int, 5)
+	header := make(map[string]int, 8)
 	headerNames, err := csvReader.Read()
 	if err != nil {
 		log.Fatal("Couldn't read header ", err)
@@ -80,13 +82,32 @@ func (r PuzzleCSVReader) NextPuzzle() (PuzzleDescription, error) {
 			continue
 		}
 
+		var start []core.TilePlacement
+		if len(record[r.header["start"]]) != 0 {
+			err = json.Unmarshal([]byte(record[r.header["start"]]), &start)
+			if err != nil {
+				fmt.Println("error reading start at line:", r.lineNumber, "error:", err)
+				continue
+			}
+		}
+		var end []core.TilePlacement
+		if len(record[r.header["end"]]) != 0 {
+			err = json.Unmarshal([]byte(record[r.header["end"]]), &end)
+			if err != nil {
+				fmt.Println("error reading end at line:", r.lineNumber, "error:", err)
+				continue
+			}
+		}
+
 		puzzle := PuzzleDescription{
-			ID:    parseInt(record[r.header["id"]]),
-			Batch: parseInt(record[r.header["batch"]]),
+			JobID:    parseInt(record[r.header["job_id"]]),
+			PuzzleID: parseInt(record[r.header["puzzle_id"]]),
 			Board: core.Coord{
 				X: parseInt(record[r.header["board_width"]]),
 				Y: parseInt(record[r.header["board_height"]])},
-			Tiles: &tiles}
+			Tiles: &tiles,
+			Start: &start,
+			End:   &end}
 		return puzzle, nil
 	}
 	return PuzzleDescription{}, io.EOF

@@ -7,7 +7,7 @@ import (
 
 // SolveNaive is a depth first solver without many clever optimizations
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
-	stop []core.TilePlacement, endTime time.Time) (map[string]int, string, uint) {
+	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint) {
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = NewTile(tileDims[i].X, tileDims[i].Y)
@@ -109,6 +109,10 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			board.GetCanonicalSolution(&newSolution)
 			preLength := len(solutions)
 			solutions[TileSliceToJSON(newSolution)] = 1
+			if stopOnSolution {
+				return solutions, "solved1", totalTilesPlaced
+			}
+
 			if len(solutions) != preLength {
 				// fmt.Println("solution found:")
 				// fmt.Println(placedTileIndex)

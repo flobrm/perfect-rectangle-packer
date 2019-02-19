@@ -20,9 +20,6 @@ var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
 // var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
-// var inputFile = "/home/florian/golang/src/localhost/flobrm/tilingsolver/input.csv"
-// var inputFile = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/input.csv"
-
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var inputPath = flag.String("inputpath", "", "input file with puzzles")
@@ -99,15 +96,42 @@ func main() {
 
 func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int) {
 	//TODO timekeeping
+	puzzlesSolved := 0
+	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
+
+	var resolutionWriter tileio.PuzzleResolutionWriter
+	var err error
+	resolutionWriter, err = tileio.NewPuzzleCSVWriter("status.csv", "puzzles.csv") //TODO check for error, close at the end
+	if err != nil {
+		log.Println("Could not open logging files: ", err)
+	}
+	defer resolutionWriter.Close()
 
 	for puzzle, err := tasks.NextPuzzle(); err != io.EOF; puzzle, err = tasks.NextPuzzle() {
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		fmt.Println(puzzle) //TODO a lot of stuff
+		log.Println("start solving job", puzzle.JobID)
+		solveStart := time.Now()
+		solveEnd := solveStart.Add(time.Duration(1000000000 * int64(puzzleTimeout)))
+		if processEndTime.Before(solveEnd) {
+			solveEnd = processEndTime
+		}
+		solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start, *puzzle.End, solveEnd)
+		solveTime := time.Since(solveStart)
+
+		//TODO write everything to file
+		resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
+		resolutionWriter.Save
+
+		log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
+		log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
+		puzzlesSolved++
+
 	}
 	log.Println("finished all puzzles")
+	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
 
 func solveTestCase() map[string]int {

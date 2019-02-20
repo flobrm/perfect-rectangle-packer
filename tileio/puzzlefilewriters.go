@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/json"
 	"localhost/flobrm/tilingsolver/core"
 	"log"
 	"os"
@@ -68,25 +69,28 @@ func (w *PuzzleCSVWriter) SaveSolutions(puzzleID int, jobID int, solutions *map[
 	return err
 }
 
-//SaveStatus writes the current
+//SaveStatus writes the results of a job to a file
 func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced int, solveTime time.Duration,
 	placements *[]core.TilePlacement) error {
 
 	writer := csv.NewWriter(w.solutionsFile)
 
-	placementString = ""
+	placementString := ""
 	if placements != nil {
-		json.Marshal(placements,)
+		placementBytes, err := json.Marshal(placements)
+		if err != nil {
+			log.Fatal("Error marshalling placement: ", placements, err)
+		}
+		placementString = string(placementBytes)
 	}
 
 	writer.Write([]string{
 		strconv.Itoa(puzzle.JobID),
 		strconv.Itoa(puzzle.JobID),
 		status,
-		strconf.Itoa(tilesPlaced),
-		strconf.Itoa(solveTime.Nanoseconds)
-		//TODO json encode placements
-	})
+		strconv.Itoa(tilesPlaced),
+		strconv.FormatInt(solveTime.Nanoseconds(), 10),
+		placementString})
 
 	writer.Flush()
 	err := w.statusFile.Sync()

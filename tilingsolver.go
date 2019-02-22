@@ -123,7 +123,7 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 
 		//TODO write everything to file
 		resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
-		resolutionWriter.Save
+		resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, nil)
 
 		log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
 		log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)

@@ -16,7 +16,7 @@ import (
 type PuzzleResolutionWriter interface {
 	Close()
 	SaveSolutions(puzzleID int, jobID int, solutions *map[string]int) error
-	SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced int, solveTime time.Duration,
+	SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced uint, solveTime time.Duration,
 		placements *[]core.TilePlacement) error
 }
 
@@ -70,10 +70,10 @@ func (w *PuzzleCSVWriter) SaveSolutions(puzzleID int, jobID int, solutions *map[
 }
 
 //SaveStatus writes the results of a job to a file
-func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced int, solveTime time.Duration,
+func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced uint, solveTime time.Duration,
 	placements *[]core.TilePlacement) error {
 
-	writer := csv.NewWriter(w.solutionsFile)
+	writer := csv.NewWriter(w.statusFile)
 
 	placementString := ""
 	if placements != nil {
@@ -88,7 +88,7 @@ func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, t
 		strconv.Itoa(puzzle.JobID),
 		strconv.Itoa(puzzle.JobID),
 		status,
-		strconv.Itoa(tilesPlaced),
+		strconv.FormatUint(uint64(tilesPlaced), 10),
 		strconv.FormatInt(solveTime.Nanoseconds(), 10),
 		placementString})
 

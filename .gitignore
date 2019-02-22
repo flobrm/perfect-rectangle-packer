@@ -3,6 +3,11 @@ img/*
 *.png
 profiling/
 *.prof
+input/
+*.csv
 
 tilingsolver
 debug
+
+.vscode/
+*/launch.json

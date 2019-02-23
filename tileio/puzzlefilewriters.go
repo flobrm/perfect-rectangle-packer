@@ -17,7 +17,7 @@ type PuzzleResolutionWriter interface {
 	Close()
 	SaveSolutions(puzzleID int, jobID int, solutions *map[string]int) error
 	SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced uint, solveTime time.Duration,
-		placements *[]core.TilePlacement) error
+		solverID int, placements *[]core.TilePlacement) error
 }
 
 // PuzzleCSVWriter keeps track of outputfiles, and implements PuzzleResolutionWriter
@@ -40,6 +40,8 @@ func NewPuzzleCSVWriter(statusFilename string, puzzleFilename string) (*PuzzleCS
 		log.Println("Can't open statusFile ", err.Error())
 		return nil, err
 	}
+	statusFile.WriteString("job_id,puzzle_id,status,tiles_placed,duration,solver_id,current_state\n")
+	solutionsFile.WriteString("puzzle_id,job_id,tiles,tiles_hash\n")
 	return &PuzzleCSVWriter{statusFile: statusFile, solutionsFile: solutionsFile}, nil
 }
 
@@ -71,12 +73,12 @@ func (w *PuzzleCSVWriter) SaveSolutions(puzzleID int, jobID int, solutions *map[
 
 //SaveStatus writes the results of a job to a file
 func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, tilesPlaced uint, solveTime time.Duration,
-	placements *[]core.TilePlacement) error {
+	solverID int, placements *[]core.TilePlacement) error {
 
 	writer := csv.NewWriter(w.statusFile)
 
 	placementString := ""
-	if placements != nil {
+	if placements != nil && len(*placements) != 0 {
 		placementBytes, err := json.Marshal(placements)
 		if err != nil {
 			log.Fatal("Error marshalling placement: ", placements, err)
@@ -86,10 +88,11 @@ func (w *PuzzleCSVWriter) SaveStatus(puzzle *PuzzleDescription, status string, t
 
 	writer.Write([]string{
 		strconv.Itoa(puzzle.JobID),
-		strconv.Itoa(puzzle.JobID),
+		strconv.Itoa(puzzle.PuzzleID),
 		status,
 		strconv.FormatUint(uint64(tilesPlaced), 10),
 		strconv.FormatInt(solveTime.Nanoseconds(), 10),
+		strconv.Itoa(solverID),
 		placementString})
 
 	writer.Flush()

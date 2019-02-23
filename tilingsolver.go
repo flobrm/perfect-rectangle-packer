@@ -22,7 +22,8 @@ var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-var inputPath = flag.String("inputpath", "", "input file with puzzles")
+
+// var inputPath = flag.String("inputpath", "", "input file with puzzles")
 
 var numTiles = flag.Int("num_tiles", 0, "Solve only puzzles with this many tiles.")
 var puzzleLimit = flag.Int("puzzle_limit", 0, "Solve at most N puzzles")
@@ -119,12 +120,12 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 		if processEndTime.Before(solveEnd) {
 			solveEnd = processEndTime
 		}
-		solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start, *puzzle.End, solveEnd, stopOnSolution)
+		solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start, *puzzle.End, solveEnd, stopOnSolution)
 		solveTime := time.Since(solveStart)
 
 		//TODO write everything to file
 		resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
-		resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, nil)
+		resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, &currentPlacement)
 
 		log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
 		log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
@@ -140,7 +141,7 @@ func solveTestCase() map[string]int {
 	tiles := make([]core.Coord, 11)
 	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
 	json.Unmarshal(tileBytes, &tiles)
-	result, _, _ := tiling.SolveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	result, _, _, _ := tiling.SolveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
 	return result
 }
 
@@ -150,7 +151,7 @@ func solveAsQas3() map[string]int {
 	for i := range tiles {
 		tiles[2-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := tiling.SolveNaive(core.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	result, _, _, _ := tiling.SolveNaive(core.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
 	return result
 }
 
@@ -160,7 +161,7 @@ func solveAsQas8() map[string]int {
 	for i := range tiles {
 		tiles[7-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	result, _, _, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
 	return result
 }
 
@@ -184,7 +185,7 @@ func solveFromFile(filePath *string) {
 	}
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
-		solutions, _, _ := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+		solutions, _, _, _ := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
 		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
@@ -234,7 +235,7 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 			if processEndTime.Before(solveEnd) {
 				solveEnd = processEndTime
 			}
-			solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd, stopOnSolution)
+			solutions, status, tilesPlaced, _ := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd, stopOnSolution)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
@@ -285,7 +286,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 			if processEndTime.Before(solveEnd) {
 				solveEnd = processEndTime
 			}
-			solutions, status, tilesPlaced := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop, solveEnd, stopOnSolution)
+			solutions, status, tilesPlaced, _ := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start, *puzzle.Stop, solveEnd, stopOnSolution)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)

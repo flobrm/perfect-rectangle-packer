@@ -7,7 +7,7 @@ import (
 
 // SolveNaive is a depth first solver without many clever optimizations
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
-	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint) {
+	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint, []core.TilePlacement) {
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = NewTile(tileDims[i].X, tileDims[i].Y)
@@ -35,7 +35,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	//place startTiles
 	if start != nil { //TODO test what if nil, what if no fit, what if index out of bounds?
 		if doSkipLastStartTiles && start[0].Idx > len(tiles)-4 { //check if early exit is possible for this job
-			return solutions, "solved", totalTilesPlaced
+			return solutions, "solved", totalTilesPlaced, nil
 		}
 		for _, placement := range start {
 			if board.Fits(tiles[placement.Idx], placement.Rot) {
@@ -90,13 +90,13 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 						// fmt.Println(stop)
 						// fmt.Println(placedTileIndex)
 						//SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-						return solutions, "solved", totalTilesPlaced
+						return solutions, "solved", totalTilesPlaced, nil
 					}
 				}
 			}
 		}
 		if time.Now().After(endTime) {
-			return solutions, "interrupted", totalTilesPlaced
+			return solutions, "interrupted", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles)
 		}
 
 		if tilesPlaced == numTiles {
@@ -110,7 +110,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			preLength := len(solutions)
 			solutions[TileSliceToJSON(newSolution)] = 1
 			if stopOnSolution {
-				return solutions, "solved1", totalTilesPlaced
+				return solutions, "solved1", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles)
 			}
 
 			if len(solutions) != preLength {
@@ -164,7 +164,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			if tilesPlaced == 0 { //No tiles on board and impossible to place new tiles, so exit
 				// fmt.Println("rotated solutions:", rotatedSolutions)
 				// fmt.Println("total solutions:", totalSolutions)
-				return solutions, "solved", totalTilesPlaced
+				return solutions, "solved", totalTilesPlaced, nil
 			}
 
 			//Remove the last tile and keep track of which tile to try next
@@ -185,9 +185,17 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			//This only works if all tiles are smaller than both board sides
 			if tilesPlaced == 0 { //Skip the last 3 startingtiles, solutions with those already exist
 				if doSkipLastStartTiles && startIndex > len(tiles)-4 {
-					return solutions, "solved", totalTilesPlaced
+					return solutions, "solved", totalTilesPlaced, nil
 				}
 			}
 		}
 	}
+}
+
+func getCurrentPlacements(tileIndexes []int, tiles []Tile) []core.TilePlacement {
+	placements := make([]core.TilePlacement, len(tileIndexes))[:0]
+	for _, idx := range tileIndexes {
+		placements = append(placements, core.TilePlacement{Idx: idx, Rot: tiles[idx].Turned})
+	}
+	return placements
 }

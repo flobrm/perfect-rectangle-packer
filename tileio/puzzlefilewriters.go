@@ -27,15 +27,15 @@ type PuzzleCSVWriter struct {
 }
 
 // NewPuzzleCSVWriter opens two files for writing and return a PuzzleCSVWriter with them.
-func NewPuzzleCSVWriter(statusFilename string, puzzleFilename string) (*PuzzleCSVWriter, error) {
+func NewPuzzleCSVWriter(statusFilename string, SolutionsFilename string) (*PuzzleCSVWriter, error) {
 	//TODO add header if statusFile doesn't have one already
-	statusFile, err := os.OpenFile("status.csv", os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0666))
+	statusFile, err := os.OpenFile(statusFilename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0666))
 	if err != nil {
 		log.Println("Can't open statusFile ", err.Error())
 		return nil, err
 	}
 	//TODO add header if solutionsfile doesn't have one already
-	solutionsFile, err := os.OpenFile("solutions.csv", os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0666))
+	solutionsFile, err := os.OpenFile(SolutionsFilename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0666))
 	if err != nil {
 		log.Println("Can't open statusFile ", err.Error())
 		return nil, err

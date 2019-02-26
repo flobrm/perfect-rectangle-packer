@@ -37,7 +37,8 @@ var stopOnSolution = flag.Bool("stop_on_solution", false, "Stop the solver after
 
 var numSolvers = flag.Int("workers", 1, "number of worker threads")
 var processID = flag.String("processID", "1", "An identifier to be able to recognize output from multiple processes")
-var jobsFile = flag.String("inputFile", "", "File with puzzles/jobs")
+var jobsFile = flag.String("input_file", "", "File with puzzles/jobs")
+var outputDir = flag.String("output_dir", "", "Directory where output should go")
 
 func main() {
 	flag.Parse()
@@ -63,6 +64,7 @@ func main() {
 	if *puzzleTimeout == 0 {
 		*puzzleTimeout = 3600 * 24 * 365 // a year in seconds, could be any big number
 	}
+	//TODO check if outputDir is real.
 
 	start := time.Now()
 
@@ -70,7 +72,7 @@ func main() {
 		taskReader := tileio.NewPuzzleCSVReader(*jobsFile)
 		//TODO setup output stuff, for now print to output
 		//outputer
-		solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution)
+		solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
 	} else if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution)
 	} else {
@@ -96,14 +98,18 @@ func main() {
 	}
 }
 
-func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool) {
-	//TODO timekeeping
+func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
+	processID string, outputDir string, workers int) {
 	puzzlesSolved := 0
 	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
 
 	var resolutionWriter tileio.PuzzleResolutionWriter
 	var err error
-	resolutionWriter, err = tileio.NewPuzzleCSVWriter("status.csv", "puzzles.csv") //TODO check for error, close at the end
+	statusFile := fmt.Sprintf("%s/%s.status.csv", outputDir, processID)
+	solutionsFile := fmt.Sprintf("%s/%s.solutions.csv", outputDir, processID)
+	fmt.Println(statusFile, solutionsFile)
+	resolutionWriter, err = tileio.NewPuzzleCSVWriter(statusFile, solutionsFile) //TODO check for error, close at the end
+	defer resolutionWriter.Close()
 	if err != nil {
 		log.Println("Could not open logging files: ", err)
 	}

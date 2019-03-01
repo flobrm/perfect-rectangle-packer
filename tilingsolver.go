@@ -98,6 +98,60 @@ func main() {
 	}
 }
 
+func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
+	processID string, outputDir string, workers int) {
+	// parse options, determine endtime
+	puzzlesSolved := 0
+	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
+
+	// for i in workers create and start worker
+	fileWriters := make([]tileio.PuzzleResolutionWriter, workers)
+	finishedJobsChan := make(chan int, workers) //one buffered channel of len workers
+	// interrupter := make(chan string, 1) //all workers will receive the same interrupt
+
+	for worker := 0; worker < workers; worker++ {
+		//open files
+		var resolutionWriter tileio.PuzzleResolutionWriter
+		var err error
+		statusFile := fmt.Sprintf("%s/%s_%d.status.csv", outputDir, processID, worker) //TODO zero pad worker
+		solutionsFile := fmt.Sprintf("%s/%s_%d.solutions.csv", outputDir, processID, worker)
+		fmt.Println(statusFile, solutionsFile)
+		resolutionWriter, err = tileio.NewPuzzleCSVWriter(statusFile, solutionsFile)
+		defer resolutionWriter.Close()
+		if err != nil {
+			log.Fatal("Could not open logging files: ", err)
+		}
+		//get puzzle
+
+		// go startWorker()
+	}
+
+	//loop and wait around
+	//if receive signal from worker
+	//get resolutionWriter back from workerFunc (or its id perhaps)
+
+	// if receive interrupt signal send interrupt to all living workers
+}
+
+func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDescription, puzzleTimeout int, processEndTime time.Time,
+	stopOnSolution bool, resolutionWriter tileio.PuzzleResolutionWriter) {
+	solveStart := time.Now()
+	solveEnd := solveStart.Add(time.Duration(1000000000 * int64(puzzleTimeout)))
+	if processEndTime.Before(solveEnd) {
+		solveEnd = processEndTime
+	}
+	solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start,
+		*puzzle.End, solveEnd, stopOnSolution)
+	solveTime := time.Since(solveStart)
+	resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
+	resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, solverID, &currentPlacement)
+
+	log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
+	log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
+	out <- workerID
+	return
+}
+
 func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
 	processID string, outputDir string, workers int) {
 	puzzlesSolved := 0
@@ -113,7 +167,6 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 	if err != nil {
 		log.Println("Could not open logging files: ", err)
 	}
-	defer resolutionWriter.Close()
 
 	for puzzle, err := tasks.NextPuzzle(); err != io.EOF; puzzle, err = tasks.NextPuzzle() {
 		if err != nil {
@@ -129,7 +182,6 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 		solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start, *puzzle.End, solveEnd, stopOnSolution)
 		solveTime := time.Since(solveStart)
 
-		//TODO write everything to file
 		resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
 		resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, solverID, &currentPlacement)
 
@@ -141,6 +193,10 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 	log.Println("finished all puzzles")
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
 }
+
+// func startTask(w *resolutionWriter) {
+
+// }
 
 func solveTestCase() map[string]int {
 	board := core.Coord{X: 41, Y: 25}

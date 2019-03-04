@@ -72,7 +72,8 @@ func main() {
 		taskReader := tileio.NewPuzzleCSVReader(*jobsFile)
 		//TODO setup output stuff, for now print to output
 		//outputer
-		solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
+		// solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
+		solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
 	} else if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution)
 	} else {
@@ -112,13 +113,11 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 
 	for worker := 0; worker < workers; worker++ {
 		//open files
-		var resolutionWriter tileio.PuzzleResolutionWriter
 		var err error
 		statusFile := fmt.Sprintf("%s/%s_%d.status.csv", outputDir, processID, worker) //TODO zero pad worker
 		solutionsFile := fmt.Sprintf("%s/%s_%d.solutions.csv", outputDir, processID, worker)
 		fmt.Println(statusFile, solutionsFile)
 		fileWriters[worker], err = tileio.NewPuzzleCSVWriter(statusFile, solutionsFile)
-		defer resolutionWriter.Close()
 		if err != nil {
 			log.Fatal("Could not open logging files: ", err)
 		}
@@ -137,23 +136,26 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 	for activeWorkers > 0 {
 		//if receive signal from worker
 		//get resolutionWriter back from workerFunc (or its id perhaps)
-
+		log.Println("ActiveWorkers: ", activeWorkers)
 		select {
 		case worker := <-finishedJobsChan:
 			puzzlesSolved++
 			activeWorkers--
+			log.Println("Finished puzzle on ", worker, activeWorkers)
 
 			if time.Now().Before(processEndTime) {
 				//start new worker
 				puzzle, err := tasks.NextPuzzle()
 				if err != nil {
 					//TODO handle error
-					log.Fatal("Couldn't read puzzle:", err)
+					log.Println("Couldn't read puzzle:", err)
 					fileWriters[worker].Close()
+					continue
 				}
 				go runWorker(finishedJobsChan, worker, solverID, puzzle, puzzleTimeout, processEndTime, stopOnSolution,
 					fileWriters[worker])
 				activeWorkers++
+				log.Println("Started puzzle ", puzzle.JobID, " on worker ", worker)
 
 			}
 			//case interrupt
@@ -176,7 +178,7 @@ func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDes
 	resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
 	resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, solverID, &currentPlacement)
 
-	log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
+	log.Println("finished solving job ", puzzle.JobID, "on worker", workerID, " in ", solveTime)
 	log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
 	out <- workerID
 	return
@@ -184,6 +186,7 @@ func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDes
 
 func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
 	processID string, outputDir string, workers int) {
+	log.Println("starting solveTasks", solverID, workers)
 	puzzlesSolved := 0
 	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
 

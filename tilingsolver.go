@@ -102,6 +102,7 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 	processID string, outputDir string, workers int) {
 	// parse options, determine endtime
 	puzzlesSolved := 0
+	activeWorkers := 0
 	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
 
 	// for i in workers create and start worker
@@ -116,21 +117,50 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 		statusFile := fmt.Sprintf("%s/%s_%d.status.csv", outputDir, processID, worker) //TODO zero pad worker
 		solutionsFile := fmt.Sprintf("%s/%s_%d.solutions.csv", outputDir, processID, worker)
 		fmt.Println(statusFile, solutionsFile)
-		resolutionWriter, err = tileio.NewPuzzleCSVWriter(statusFile, solutionsFile)
+		fileWriters[worker], err = tileio.NewPuzzleCSVWriter(statusFile, solutionsFile)
 		defer resolutionWriter.Close()
 		if err != nil {
 			log.Fatal("Could not open logging files: ", err)
 		}
 		//get puzzle
-
-		// go startWorker()
+		puzzle, err := tasks.NextPuzzle()
+		if err != nil {
+			//TODO handle error
+			log.Println("Couldn't read puzzle, assuming EOF:", err)
+			break
+		}
+		go runWorker(finishedJobsChan, worker, solverID, puzzle, puzzleTimeout, processEndTime, stopOnSolution, fileWriters[worker])
+		activeWorkers++
 	}
 
 	//loop and wait around
-	//if receive signal from worker
-	//get resolutionWriter back from workerFunc (or its id perhaps)
+	for activeWorkers > 0 {
+		//if receive signal from worker
+		//get resolutionWriter back from workerFunc (or its id perhaps)
 
-	// if receive interrupt signal send interrupt to all living workers
+		select {
+		case worker := <-finishedJobsChan:
+			puzzlesSolved++
+			activeWorkers--
+
+			if time.Now().Before(processEndTime) {
+				//start new worker
+				puzzle, err := tasks.NextPuzzle()
+				if err != nil {
+					//TODO handle error
+					log.Fatal("Couldn't read puzzle:", err)
+					fileWriters[worker].Close()
+				}
+				go runWorker(finishedJobsChan, worker, solverID, puzzle, puzzleTimeout, processEndTime, stopOnSolution,
+					fileWriters[worker])
+				activeWorkers++
+
+			}
+			//case interrupt
+		}
+	}
+	log.Println("Finished puzzleSolving, with", puzzlesSolved, "done  ")
+	log.Println(processEndTime.Sub(time.Now()).String(), "before end time")
 }
 
 func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDescription, puzzleTimeout int, processEndTime time.Time,

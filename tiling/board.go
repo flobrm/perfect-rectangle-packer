@@ -1,32 +1,34 @@
 package tiling
 
+import "localhost/flobrm/tilingsolver/core"
+
 //Board stores the board and everything placed on it
 type Board struct {
-	Size          Coord     //width and hight of the board
-	Tiles         [](*Tile) //All the placed tiles
-	Candidates    []Coord   //Candidate positions for next placement
-	board         [][]uint8 // first x then y
+	Size          core.Coord   //width and hight of the board
+	Tiles         [](*Tile)    //All the placed tiles
+	Candidates    []core.Coord //Candidate positions for next placement
+	board         [][]uint8    // first x then y
 	pairs         [](*TilePair)
 	lastCollision *Tile
 }
 
 //NewBoard inits a board, including candidates
-func NewBoard(boardDims Coord, tiles []Tile) Board {
+func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
-	candidates := append(make([]Coord, 0), Coord{X: 0, Y: 0})
+	candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
 	board := make([][]uint8, boardDims.X)
 	for i := 0; i < len(board); i++ {
 		board[i] = make([]uint8, boardDims.Y)
 	}
 	return Board{
-		Size:       Coord{boardDims.X, boardDims.Y},
+		Size:       core.Coord{X: boardDims.X, Y: boardDims.Y},
 		Tiles:      myTiles[:0],
 		Candidates: candidates,
 		board:      board,
 		pairs:      make([](*TilePair), len(tiles))[:0]}
 }
 
-func (b *Board) addCandidate(newCand Coord) {
+func (b *Board) addCandidate(newCand core.Coord) {
 	b.Candidates = append(b.Candidates, newCand)
 }
 
@@ -118,7 +120,6 @@ func (b *Board) PlaceTile(tile *Tile, turned bool) {
 	b.Candidates = b.Candidates[:candIndex] //remove last candidate
 	b.addCandidates(*tile)
 	b.Tiles = append(b.Tiles, tile)
-	//TODO store tile for easy removal
 }
 
 func (b *Board) putTileOnBoard(tile *Tile) {
@@ -155,11 +156,11 @@ func (b *Board) addCandidates(tile Tile) {
 	candidateY := tile.Y + tile.CurH
 	if candidateY < b.Size.Y {
 		if tile.X == 0 { //left border counts as corner
-			b.addCandidate(Coord{X: 0, Y: candidateY})
+			b.addCandidate(core.Coord{X: 0, Y: candidateY})
 		} else if b.board[tile.X-1][candidateY] != 0 {
 			for x := tile.X; x < tile.X+tile.CurW; x++ {
 				if b.board[x][candidateY] == 0 {
-					b.addCandidate(Coord{X: x, Y: candidateY})
+					b.addCandidate(core.Coord{X: x, Y: candidateY})
 					break
 				}
 			}
@@ -170,11 +171,11 @@ func (b *Board) addCandidates(tile Tile) {
 	candidateX := tile.X + tile.CurW
 	if candidateX < b.Size.X {
 		if tile.Y == 0 { //always add candidate if tile on bottom
-			b.addCandidate(Coord{X: candidateX, Y: 0})
+			b.addCandidate(core.Coord{X: candidateX, Y: 0})
 		} else if b.board[candidateX][tile.Y-1] != 0 {
 			for y := tile.Y; y < tile.Y+tile.CurH; y++ {
 				if b.board[candidateX][y] == 0 {
-					b.addCandidate(Coord{X: candidateX, Y: y})
+					b.addCandidate(core.Coord{X: candidateX, Y: y})
 					break
 				}
 			}
@@ -182,7 +183,7 @@ func (b *Board) addCandidates(tile Tile) {
 	}
 }
 
-func (b *Board) posCollides(pos Coord) (collides bool, collider *Tile) {
+func (b *Board) posCollides(pos core.Coord) (collides bool, collider *Tile) {
 	collides = b.board[pos.X][pos.Y] != 0
 	if collides {
 		collider = b.Tiles[b.board[pos.X][pos.Y]-1]
@@ -197,7 +198,7 @@ func (b *Board) RemoveLastTile() {
 	b.removeLastPair(&tile)
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
-	b.addCandidate(Coord{tile.X, tile.Y})
+	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
 }
@@ -230,7 +231,7 @@ func (b *Board) removeCandidates(tile Tile) {
 	}
 }
 
-func isRightCandidate(cand Coord, tile Tile) bool {
+func isRightCandidate(cand core.Coord, tile Tile) bool {
 	if cand.X == tile.X+tile.CurW {
 		if cand.Y >= tile.Y && cand.Y < tile.Y+tile.CurH {
 			return true
@@ -239,7 +240,7 @@ func isRightCandidate(cand Coord, tile Tile) bool {
 	return false
 }
 
-func isTopCandidate(cand Coord, tile Tile) bool {
+func isTopCandidate(cand core.Coord, tile Tile) bool {
 	if cand.Y == tile.Y+tile.CurH {
 		if cand.X >= tile.X && cand.X < tile.X+tile.CurW {
 			return true

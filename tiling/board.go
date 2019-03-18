@@ -59,13 +59,13 @@ func (b *Board) Fits(tile *Tile, turned bool) bool {
 		}
 	}
 
+	//Check for collisions with other placed tiles
 	if b.lastCollision != nil && b.lastCollision.Placed {
 		if tile.collides(b.lastCollision) {
 			tile.Remove()
 			return false
 		}
 	}
-
 	for _, tile2 := range b.Tiles {
 		if tile.collides(tile2) {
 			tile.Remove()
@@ -74,17 +74,11 @@ func (b *Board) Fits(tile *Tile, turned bool) bool {
 		}
 	}
 
-	pair, isCanonical := b.getPair(tile)
-	if pair == nil {
-		return true
-	} else if isCanonical {
-		b.pairs = append(b.pairs, pair) //TODO perhaps in placeTile?
-		return true
-	} else {
+	if !b.hasLegalNeighbors(&tile) {
 		return false
 	}
-
 	// return true
+	return true
 }
 
 //tileFitsBoard checks if the tile with it's internal rotation and position fits inside the board
@@ -151,7 +145,6 @@ func (b *Board) removeTileFromBoard(tile *Tile) {
 }
 
 func (b *Board) addCandidates(tile Tile) {
-
 	//find top tile
 	candidateY := tile.Y + tile.CurH
 	if candidateY < b.Size.Y {
@@ -327,4 +320,11 @@ func (b *Board) flipTilesVertically(tiles *[]Tile) *[]Tile {
 		(*tiles)[i].Y = b.Size.Y - (*tiles)[i].Y - (*tiles)[i].CurH
 	}
 	return tiles
+}
+
+func (b *Board) hasLegalNeighbors(tile *Tile) {
+	//check bottom
+	//check left
+	//check top
+	//check right
 }

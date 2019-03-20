@@ -41,6 +41,13 @@ var jobsFile = flag.String("input_file", "", "File with puzzles/jobs")
 var outputDir = flag.String("output_dir", "", "Directory where output should go")
 
 func main() {
+	start2 := time.Now()
+	results := solveAsQas8()
+	log.Println(results)
+	elapsed2 := time.Since(start2)
+	log.Println("time: ", elapsed2)
+	return
+
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
 	if *cpuprofile != "" {

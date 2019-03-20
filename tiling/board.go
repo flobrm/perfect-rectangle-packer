@@ -1,6 +1,8 @@
 package tiling
 
-import "localhost/flobrm/tilingsolver/core"
+import (
+	"localhost/flobrm/tilingsolver/core"
+)
 
 //Board stores the board and everything placed on it
 type Board struct {
@@ -40,9 +42,26 @@ func Min(a, b int) int {
 	return b
 }
 
+//Max returns the min of two integers, why the fuck do I have to define this
+func Max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+//Place places a tile on the board if it is possible. It returns whether the tile was placed
+func (b *Board) Place(tile *Tile, turned bool) bool {
+	if b.fits(tile, turned) {
+		b.placeTile(tile, turned)
+		return true
+	}
+	return false
+}
+
 //Fits checks if a tile fits the board at the next position to fill
 //TODO merge with Place
-func (b *Board) Fits(tile *Tile, turned bool) bool {
+func (b *Board) fits(tile *Tile, turned bool) bool {
 	// fmt.Println(tile)
 	candIndex := len(b.Candidates) - 1
 	pos := b.Candidates[candIndex]
@@ -74,9 +93,13 @@ func (b *Board) Fits(tile *Tile, turned bool) bool {
 		}
 	}
 
-	if !b.hasLegalNeighbors(&tile) {
+	notIllegalPair := b.updateNeighborsTree(tile)
+	if !notIllegalPair {
+		b.removeTileFromPairTree(tile)
+		tile.Remove()
 		return false
 	}
+
 	// return true
 	return true
 }
@@ -90,23 +113,8 @@ func (b *Board) tileFitsBoard(tile *Tile) bool {
 	return true
 }
 
-// getPair checks if tile forms a larger rectangle with the tiles already placed on the board.
-// It only returns the first found pair where the counter tile is not already part of a pair.
-// isCanonical is true if the tile with the lower index is lower or more to the left
-func (b *Board) getPair(tile *Tile) (*TilePair, bool) {
-	//check only last tile, assume last tile should be below or to the left
-	if len(b.Tiles) > 1 {
-		lastTile := b.Tiles[len(b.Tiles)-1]
-		if tile.Y == lastTile.Y && tile.CurH == lastTile.CurH && //same row and same height
-			lastTile.X+lastTile.CurW == tile.X { //lastTile is to the left of tile
-			return &TilePair{a: lastTile, b: tile}, lastTile.Index > tile.Index
-		}
-	}
-	return nil, false
-}
-
 //PlaceTile registers a tile as placed on the current spot to fill, Fits should be called first
-func (b *Board) PlaceTile(tile *Tile, turned bool) {
+func (b *Board) placeTile(tile *Tile, turned bool) {
 	candIndex := len(b.Candidates) - 1
 	pos := b.Candidates[candIndex]
 	tile.Place(pos, turned)
@@ -188,23 +196,12 @@ func (b *Board) posCollides(pos core.Coord) (collides bool, collider *Tile) {
 //RemoveLastTile removes a tile and resets it's candidate positions
 func (b *Board) RemoveLastTile() {
 	tile := *b.Tiles[len(b.Tiles)-1]
-	b.removeLastPair(&tile)
+	b.removeTileFromPairTree(&tile)
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
 	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
-}
-
-func (b *Board) removeLastPair(tile *Tile) {
-	index := len(b.pairs) - 1
-	if index >= 0 {
-		if b.pairs[index].a.Index == tile.Index || b.pairs[index].b.Index == tile.Index {
-			b.pairs = b.pairs[:index]
-			// fmt.Println("removing")
-		}
-	}
-	// fmt.Println(len(b.pairs))
 }
 
 func (b *Board) removeCandidates(tile Tile) {
@@ -322,9 +319,121 @@ func (b *Board) flipTilesVertically(tiles *[]Tile) *[]Tile {
 	return tiles
 }
 
-func (b *Board) hasLegalNeighbors(tile *Tile) {
-	//check bottom
-	//check left
-	//check top
-	//check right
+func (b *Board) addTilePair(t1 *Tile, t2 *Tile) {
+	var X, Y, W, H int
+	X = Min(t1.X, t2.X)
+	Y = Min(t1.Y, t2.Y)
+	if t1.CurW == t2.CurW {
+		W = t1.CurW
+		H = t1.CurH + t2.CurH
+	} else {
+		W = t1.CurW + t2.CurW
+		H = t1.CurH
+	}
+	parent := NewTile(W, H)
+	parent.Place(core.Coord{X: X, Y: Y}, false)
+	parent.Index = Max(t1.Index, t2.Index) //TODO should this be min or max?
+	parent.lChild = t1
+	parent.rChild = t2
+	t1.parent = &parent
+	t2.parent = &parent
+}
+
+//Check if the tile has neighbors on the board. If all neighbors have a larger index return true and
+func (b *Board) updateNeighborsTree(tile *Tile) bool {
+	for tileAddition := tile; tileAddition != nil; tileAddition = tileAddition.parent {
+		//check bottom
+		if tileAddition.Y > 0 && b.board[tileAddition.X][tileAddition.Y-1] > 0 {
+			otherIndex := b.board[tileAddition.X][tileAddition.Y-1] - 1
+			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
+				if other.X == tileAddition.X && other.CurW == tileAddition.CurW {
+					if other.Index < tileAddition.Index {
+						return false // found an illegal pair
+					}
+					//There is a legal pairing, see what to do about it
+					if tileAddition.parent != nil || other.parent != nil {
+						continue //already have a parent, can't add a new node
+					} else {
+						b.addTilePair(other, tileAddition)
+						break
+					}
+				} else { //No pair, continue checking the other directions
+					break
+				}
+			}
+		}
+
+		//check left
+		if tileAddition.X > 0 && b.board[tileAddition.X-1][tileAddition.Y] > 0 {
+			otherIndex := b.board[tileAddition.X-1][tileAddition.Y] - 1
+			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
+				if other.Y == tileAddition.Y && other.CurH == tileAddition.CurH {
+					if other.Index < tileAddition.Index {
+						return false // found an illegal pair
+					}
+					//There is a legal pairing, see what to do about it
+					if tileAddition.parent != nil || other.parent != nil {
+						continue //already have a parent, can't add a new node
+					} else {
+						b.addTilePair(other, tileAddition)
+						break
+					}
+				} else { //No pair, continue checking the other directions
+					break
+				}
+			}
+		}
+
+		//check right
+		if tileAddition.X+tileAddition.CurW < b.Size.X-1 && b.board[tileAddition.X+tileAddition.CurW][tileAddition.Y] > 0 {
+			otherIndex := b.board[tileAddition.X+tileAddition.CurW][tileAddition.Y] - 1
+			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
+				if other.Y == tileAddition.Y && other.CurH == tileAddition.CurH {
+					if other.Index < tileAddition.Index {
+						return false // found an illegal pair
+					}
+					//There is a legal pairing, see what to do about it
+					if tileAddition.parent != nil || other.parent != nil {
+						continue //already have a parent, can't add a new node
+					} else {
+						b.addTilePair(other, tileAddition)
+						break
+					}
+				} else { //No pair, continue checking the other directions
+					break
+				}
+			}
+		}
+
+		//check top
+		if tileAddition.Y+tileAddition.CurH < b.Size.Y-1 && b.board[tileAddition.X][tileAddition.Y+tileAddition.CurH] > 0 {
+			otherIndex := b.board[tileAddition.X][tileAddition.Y-1] - 1
+			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
+				if other.X == tileAddition.X && other.CurW == tileAddition.CurW {
+					if other.Index < tileAddition.Index {
+						return false // found an illegal pair
+					}
+					//There is a legal pairing, see what to do about it
+					if tileAddition.parent != nil || other.parent != nil {
+						continue //already have a parent, can't add a new node
+					} else {
+						b.addTilePair(other, tileAddition)
+						break
+					}
+				} else { //No pair, continue checking the other directions
+					break
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (b *Board) removeTileFromPairTree(tile *Tile) {
+	for parent := tile.parent; parent != nil; parent = parent.parent {
+		parent.lChild.parent = nil
+		parent.rChild.parent = nil
+		parent.lChild = nil
+		parent.rChild = nil
+	}
 }

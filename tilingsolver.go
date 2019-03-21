@@ -16,10 +16,6 @@ import (
 	"time"
 )
 
-var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
-
-// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
-
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -263,7 +259,8 @@ func solveAsQas8() map[string]int {
 	for i := range tiles {
 		tiles[7-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	result, _, steps, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	fmt.Println("steps", steps)
 	return result
 }
 

@@ -93,12 +93,12 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 		}
 	}
 
-	notIllegalPair := b.updateNeighborsTree(tile)
-	if !notIllegalPair {
-		b.removeTileFromPairTree(tile)
-		tile.Remove()
-		return false
-	}
+	// notIllegalPair := b.updateNeighborsTree(tile)
+	// if !notIllegalPair {
+	// 	b.removeTileFromPairTree(tile)
+	// 	tile.Remove()
+	// 	return false
+	// }
 
 	// return true
 	return true
@@ -200,6 +200,9 @@ func (b *Board) RemoveLastTile() {
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
 	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
+	if b.lastCollision != nil && b.lastCollision.Index == tile.Index {
+		b.lastCollision = nil
+	}
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
 }
@@ -347,7 +350,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X][tileAddition.Y-1] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.X == tileAddition.X && other.CurW == tileAddition.CurW {
-					if other.Index < tileAddition.Index {
+					if other.Index > tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it
@@ -368,7 +371,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X-1][tileAddition.Y] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.Y == tileAddition.Y && other.CurH == tileAddition.CurH {
-					if other.Index < tileAddition.Index {
+					if other.Index > tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it
@@ -389,7 +392,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X+tileAddition.CurW][tileAddition.Y] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.Y == tileAddition.Y && other.CurH == tileAddition.CurH {
-					if other.Index < tileAddition.Index {
+					if other.Index > tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it
@@ -410,7 +413,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X][tileAddition.Y-1] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.X == tileAddition.X && other.CurW == tileAddition.CurW {
-					if other.Index < tileAddition.Index {
+					if other.Index > tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it
@@ -426,7 +429,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			}
 		}
 	}
-	return false
+	return true
 }
 
 func (b *Board) removeTileFromPairTree(tile *Tile) {

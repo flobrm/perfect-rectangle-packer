@@ -10,7 +10,7 @@ type Board struct {
 	Tiles         [](*Tile)    //All the placed tiles
 	Candidates    []core.Coord //Candidate positions for next placement
 	board         [][]uint8    // first x then y
-	pairs         [](*TilePair)
+	gapTable      [][]int
 	lastCollision *Tile
 }
 
@@ -19,6 +19,8 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
 	candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
 	board := make([][]uint8, boardDims.X)
+	gapTable := buildGapTable(tiles, 15) //TODO make this a variable
+
 	for i := 0; i < len(board); i++ {
 		board[i] = make([]uint8, boardDims.Y)
 	}
@@ -27,7 +29,17 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 		Tiles:      myTiles[:0],
 		Candidates: candidates,
 		board:      board,
-		pairs:      make([](*TilePair), len(tiles))[:0]}
+		gapTable:   gapTable,
+	}
+}
+
+func buildGapTable(tiles []Tile, maxGapWidth int) {
+	gapTable := make([][]int, len(tiles))
+	for i, row := range gapTable {
+
+	}
+
+	return gapTable
 }
 
 func (b *Board) addCandidate(newCand core.Coord) {

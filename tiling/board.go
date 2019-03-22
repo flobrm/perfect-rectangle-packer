@@ -6,40 +6,66 @@ import (
 
 //Board stores the board and everything placed on it
 type Board struct {
-	Size          core.Coord   //width and hight of the board
-	Tiles         [](*Tile)    //All the placed tiles
-	Candidates    []core.Coord //Candidate positions for next placement
-	board         [][]uint8    // first x then y
-	gapTable      [][]int
+	Size       core.Coord //width and hight of the board
+	Tiles      [](*Tile)  //All the placed tiles
+	Candidates []gap
+	// Candidates    []core.Coord //Candidate positions for next placement
+	board         [][]uint8 // first x then y
+	gaps          []gap
+	gapTable      [][][]int //lookup table for impossible gaps, in order width, height, tileIndex
+	maxGapTable   [][]int   //lookup table with maximum possible area for a gap of a certain width and height, given a full tileset
 	lastCollision *Tile
 }
 
 //NewBoard inits a board, including candidates
 func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
-	candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
+	// candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
+	candidates := append(make([]gap, len(tiles))[:0], gap{X: 0, Y: 0, W: boardDims.X, H: boardDims.Y})
 	board := make([][]uint8, boardDims.X)
-	gapTable := buildGapTable(tiles, 15) //TODO make this a variable
+	gaps := make([]gap, len(tiles))
+	gapTable, maxGapTable := buildGapTable(tiles, 15, 20) //TODO make this a variable
 
 	for i := 0; i < len(board); i++ {
 		board[i] = make([]uint8, boardDims.Y)
 	}
 	return Board{
-		Size:       core.Coord{X: boardDims.X, Y: boardDims.Y},
-		Tiles:      myTiles[:0],
-		Candidates: candidates,
-		board:      board,
-		gapTable:   gapTable,
+		Size:        core.Coord{X: boardDims.X, Y: boardDims.Y},
+		Tiles:       myTiles[:0],
+		Candidates:  candidates,
+		board:       board,
+		gaps:        gaps[:0],
+		gapTable:    gapTable,
+		maxGapTable: maxGapTable,
 	}
 }
 
-func buildGapTable(tiles []Tile, maxGapWidth int) {
-	gapTable := make([][]int, len(tiles))
-	for i, row := range gapTable {
-
+func buildGapTable(tiles []Tile, maxGapWidth int, maxGapHeight int) ([][][]int, [][]int) {
+	gapTable := make([][][]int, maxGapWidth+1)
+	// gapTable := make([][]int, len(tiles))
+	maxGapArea := make([][]int, maxGapWidth+1)
+	for width := 0; width <= maxGapWidth; width++ {
+		// fmt.Print(width)
+		gapTable[width] = make([][]int, maxGapHeight+1)
+		maxGapArea[width] = make([]int, maxGapHeight+1)
+		for height := 0; height <= maxGapHeight; height++ {
+			// fmt.Print(height)
+			gapTable[width][height] = make([]int, len(tiles))
+			for _, tile := range tiles {
+				if tile.H <= width {
+					area := Min(tile.W, height) * tile.H
+					if tile.W <= width {
+						area = Max(area, tile.W*Min(tile.H, height))
+					}
+					gapTable[width][height][tile.Index] = area
+					maxGapArea[width][height] += area
+					// fmt.Println("w:", width, "h:", height, "tile", tile.W, tile.H, "area", area)
+				}
+			}
+		}
 	}
 
-	return gapTable
+	return gapTable, maxGapArea
 }
 
 func (b *Board) addCandidate(newCand core.Coord) {
@@ -114,6 +140,45 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 
 	// return true
 	return true
+}
+
+type gap struct {
+	X, Y, W, H int
+	active     bool
+}
+
+func (b *Board) anyGapsUnfillable() bool {
+	//TODO check if all gaps combined could be fillable
+	for _, gap := range b.gaps {
+		if b.gapIsUnfillable(&gap) {
+			return true
+		}
+	}
+	return false
+}
+
+// gapIsUnfillable returns true if there is no way to sum to the area of a gap with the unplaced tiles.
+// It is named like this because proving that a gap is fillable with a given tileset is a lot
+// harder and outside the scope of this function.
+func (b *Board) gapIsUnfillable(g *gap) bool {
+	width := g.W
+	height := g.H
+	//first check if our lookup tables contain a gap of those dimensions
+	if width+1 > len(b.gapTable) || height+1 > len(b.gapTable[0]) {
+		return false
+	}
+	targetArea := width * height
+	maxArea := b.maxGapTable[width][height]
+	if maxArea < targetArea {
+		return true
+	}
+	for _, tile := range b.Tiles { // remove the areas of already placed tiles
+		maxArea -= b.gapTable[width][height][tile.Index]
+	}
+	if maxArea < targetArea {
+		return true
+	}
+	return false
 }
 
 //tileFitsBoard checks if the tile with it's internal rotation and position fits inside the board

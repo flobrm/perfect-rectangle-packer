@@ -149,9 +149,11 @@ func (b *Board) RemoveLastTile() *Tile {
 	tile := *b.Tiles[len(b.Tiles)-1]
 	b.removeCandidates(tile)
 	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
+	if b.lastCollision != nil && b.lastCollision.Index == tile.Index {
+		b.lastCollision = nil
+	}
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
-
 	return &tile
 }
 

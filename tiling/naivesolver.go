@@ -6,8 +6,9 @@ import (
 )
 
 //Debug locations
-// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // SolveNaive is a depth first solver without many clever optimizations
 // returns a map with solutions, the reason for stopping, the number of steps taken,
@@ -70,13 +71,13 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 
 	for {
-		if step >= 0 { //&& step < 8500 {
-			// fmt.Println("step: ", step)
-			// SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		}
-		if step >= 3187 {
-			// fmt.Println("start debugging here")
-		}
+		// if step >= 8547 { //&& step < 8500 {
+		// fmt.Println("step: ", step)
+		// SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		// }
+		// if step >= 8548 {
+		// 	fmt.Println("start debugging here")
+		// }
 		// if step == 500 {
 		// 	return solutions
 		// }

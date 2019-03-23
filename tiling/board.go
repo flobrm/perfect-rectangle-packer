@@ -74,6 +74,7 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 	if len(b.Tiles) > 0 && tile.Index < b.Tiles[0].Index {
 		corner := b.isCornerTile(tile)
 		if corner != noCorner && corner != bottomLeftCorner {
+			tile.Remove()
 			return false
 		}
 	}
@@ -93,12 +94,12 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 		}
 	}
 
-	// notIllegalPair := b.updateNeighborsTree(tile)
-	// if !notIllegalPair {
-	// 	b.removeTileFromPairTree(tile)
-	// 	tile.Remove()
-	// 	return false
-	// }
+	notIllegalPair := b.updateNeighborsTree(tile)
+	if !notIllegalPair {
+		b.removeTileFromPairTree(tile)
+		tile.Remove()
+		return false
+	}
 
 	// return true
 	return true

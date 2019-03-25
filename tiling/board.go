@@ -11,7 +11,6 @@ type Board struct {
 	Candidates []gap
 	// Candidates    []core.Coord //Candidate positions for next placement
 	board         [][]uint8 // first x then y
-	gaps          []gap
 	gapTable      [][][]int //lookup table for impossible gaps, in order width, height, tileIndex
 	maxGapTable   [][]int   //lookup table with maximum possible area for a gap of a certain width and height, given a full tileset
 	lastCollision *Tile
@@ -21,9 +20,8 @@ type Board struct {
 func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
 	// candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
-	candidates := append(make([]gap, len(tiles))[:0], gap{X: 0, Y: 0, W: boardDims.X, H: boardDims.Y})
+	candidates := append(make([]gap, len(tiles))[:0], gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y})
 	board := make([][]uint8, boardDims.X)
-	gaps := make([]gap, len(tiles))
 	gapTable, maxGapTable := buildGapTable(tiles, 15, 20) //TODO make this a variable
 
 	for i := 0; i < len(board); i++ {
@@ -34,7 +32,6 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 		Tiles:       myTiles[:0],
 		Candidates:  candidates,
 		board:       board,
-		gaps:        gaps[:0],
 		gapTable:    gapTable,
 		maxGapTable: maxGapTable,
 	}
@@ -68,8 +65,8 @@ func buildGapTable(tiles []Tile, maxGapWidth int, maxGapHeight int) ([][][]int, 
 	return gapTable, maxGapArea
 }
 
-func (b *Board) addCandidate(newCand core.Coord) {
-	b.Candidates = append(b.Candidates, newCand)
+func (b *Board) addCandidate(newGap gap) {
+	b.Candidates = append(b.Candidates, newGap)
 }
 
 //Min returns the min of two integers, why the fuck do I have to define this
@@ -100,14 +97,23 @@ func (b *Board) Place(tile *Tile, turned bool) bool {
 //Fits checks if a tile fits the board at the next position to fill
 //TODO merge with Place
 func (b *Board) fits(tile *Tile, turned bool) bool {
-	// fmt.Println(tile)
-	candIndex := len(b.Candidates) - 1
-	pos := b.Candidates[candIndex]
-	tile.Place(pos, turned)
+	gap := b.Candidates[len(b.Candidates)-1]
+
+	if b.anyGapsUnfillable() {
+		return false
+	}
+
+	tile.Place(gap.Pos, turned)
 	if !b.tileFitsBoard(tile) {
 		tile.Remove()
 		return false
 	}
+
+	if !gap.couldFit(tile) {
+		tile.Remove()
+		return false
+	}
+
 	//Check if the tile is a corner piece smaller than the lower left corner tile
 	if len(b.Tiles) > 0 && tile.Index < b.Tiles[0].Index {
 		corner := b.isCornerTile(tile)
@@ -116,41 +122,87 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 			return false
 		}
 	}
+	//TODO check if part is sticking out above gap and check that part for collisions
 
-	//Check for collisions with other placed tiles
-	if b.lastCollision != nil && b.lastCollision.Placed {
-		if tile.collides(b.lastCollision) {
-			tile.Remove()
-			return false
-		}
-	}
-	for _, tile2 := range b.Tiles {
-		if tile.collides(tile2) {
-			tile.Remove()
-			b.lastCollision = tile2
-			return false
-		}
-	}
+	//TODO check if gap is plausible
 
-	notIllegalPair := b.updateNeighborsTree(tile)
-	if !notIllegalPair {
-		b.removeTileFromPairTree(tile)
-		tile.Remove()
-		return false
-	}
+	// notIllegalPair := b.updateNeighborsTree(tile)
+	// if !notIllegalPair {
+	// 	b.removeTileFromPairTree(tile)
+	// 	tile.Remove()
+	// 	return false
+	// }
 
 	// return true
 	return true
 }
 
+// //Fits checks if a tile fits the board at the next position to fill
+// //TODO merge with Place
+// func (b *Board) fits(tile *Tile, turned bool) bool {
+// 	// fmt.Println(tile)
+// 	candIndex := len(b.Candidates) - 1
+// 	pos := b.Candidates[candIndex].Pos
+// 	tile.Place(pos, turned)
+// 	if !b.tileFitsBoard(tile) {
+// 		tile.Remove()
+// 		return false
+// 	}
+// 	//Check if the tile is a corner piece smaller than the lower left corner tile
+// 	if len(b.Tiles) > 0 && tile.Index < b.Tiles[0].Index {
+// 		corner := b.isCornerTile(tile)
+// 		if corner != noCorner && corner != bottomLeftCorner {
+// 			tile.Remove()
+// 			return false
+// 		}
+// 	}
+
+// 	//Check for collisions with other placed tiles
+// 	if b.lastCollision != nil && b.lastCollision.Placed {
+// 		if tile.collides(b.lastCollision) {
+// 			tile.Remove()
+// 			return false
+// 		}
+// 	}
+// 	for _, tile2 := range b.Tiles {
+// 		if tile.collides(tile2) {
+// 			tile.Remove()
+// 			b.lastCollision = tile2
+// 			return false
+// 		}
+// 	}
+
+// 	//TODO
+
+// 	notIllegalPair := b.updateNeighborsTree(tile)
+// 	if !notIllegalPair {
+// 		b.removeTileFromPairTree(tile)
+// 		tile.Remove()
+// 		return false
+// 	}
+
+// 	// return true
+// 	return true
+// }
+
 type gap struct {
-	X, Y, W, H int
-	active     bool
+	Pos    core.Coord
+	W, H   int
+	active bool
+}
+
+//couldFit returns if a tile could fit in a gap. This assumes the tile is placed in the lower left corner
+// It doesn't check if the part of the tile above the gap collides with anything.
+func (g *gap) couldFit(tile *Tile) bool {
+	if tile.CurW <= g.W {
+		return true
+	}
+	return false
 }
 
 func (b *Board) anyGapsUnfillable() bool {
 	//TODO check if all gaps combined could be fillable
-	for _, gap := range b.gaps {
+	for _, gap := range b.Candidates {
 		if b.gapIsUnfillable(&gap) {
 			return true
 		}
@@ -158,10 +210,81 @@ func (b *Board) anyGapsUnfillable() bool {
 	return false
 }
 
+func (b *Board) leftGapHeight(pos *core.Coord) int {
+	if pos.X == 0 {
+		return b.Size.Y - pos.Y
+	}
+	leftY := pos.Y
+	for leftY < b.Size.Y && b.board[pos.X-1][leftY] != 0 && b.board[pos.X][leftY] == 0 {
+		index := b.board[pos.X-1][leftY] - 1
+		leftY = b.Tiles[index].Y + b.Tiles[index].CurH
+	}
+	return leftY - pos.Y
+}
+
+func (b *Board) rightGapHeight(pos *core.Coord, width int) int {
+	rightX := pos.X + width
+	if rightX >= b.Size.X {
+		return b.Size.Y - pos.Y
+	}
+	curY := pos.Y
+	for curY < b.Size.Y && b.board[pos.X][curY] != 0 && b.board[pos.X-1][curY] == 0 {
+		index := b.board[pos.X][curY] - 1
+		curY = b.Tiles[index].Y + b.Tiles[index].CurH
+	}
+
+	return pos.Y - curY
+}
+
+func (b *Board) gapWidth(pos *core.Coord) int {
+	if pos.Y == 0 {
+		return b.Size.X - pos.X //TODO actually check board, instead of assuming
+	}
+	xPos := pos.X
+	for xPos < b.Size.X && b.board[xPos][pos.Y-1] != 0 && b.board[xPos][pos.Y] == 0 {
+		index := b.board[xPos][pos.Y-1] - 1
+		xPos = b.Tiles[index].X + b.Tiles[index].CurW
+	}
+	return xPos - pos.X
+}
+
+func (b *Board) makeNewGap(pos *core.Coord) gap {
+
+	width := b.gapWidth(pos)
+	rightHeight := b.rightGapHeight(pos, width)
+	//TODO build gap
+	return gap{
+		Pos:    *pos,
+		W:      width,                                  //TODO
+		H:      Min(b.leftGapHeight(pos), rightHeight), //TODO
+		active: rightHeight > 0,
+	}
+}
+
+func (b *Board) makeFromOldGap(oldGap *gap, newPos *core.Coord) gap {
+	//TODO build gap
+	var newGap gap
+	if oldGap.Pos.Y == newPos.Y {
+		newGap = gap{
+			Pos: *newPos,
+			W:   0,                //TODO
+			H:   Min(oldGap.H, 0), //TODO
+		}
+
+	} else {
+		newGap = b.makeNewGap(newPos)
+
+	}
+	return newGap
+}
+
 // gapIsUnfillable returns true if there is no way to sum to the area of a gap with the unplaced tiles.
 // It is named like this because proving that a gap is fillable with a given tileset is a lot
 // harder and outside the scope of this function.
 func (b *Board) gapIsUnfillable(g *gap) bool {
+	if !g.active {
+		return false
+	}
 	width := g.W
 	height := g.H
 	//first check if our lookup tables contain a gap of those dimensions
@@ -194,12 +317,11 @@ func (b *Board) tileFitsBoard(tile *Tile) bool {
 //PlaceTile registers a tile as placed on the current spot to fill, Fits should be called first
 func (b *Board) placeTile(tile *Tile, turned bool) {
 	candIndex := len(b.Candidates) - 1
-	pos := b.Candidates[candIndex]
-	tile.Place(pos, turned)
+	tile.Place(b.Candidates[candIndex].Pos, turned)
 	b.putTileOnBoard(tile)
+	b.Tiles = append(b.Tiles, tile)
 	b.Candidates = b.Candidates[:candIndex] //remove last candidate
 	b.addCandidates(*tile)
-	b.Tiles = append(b.Tiles, tile)
 }
 
 func (b *Board) putTileOnBoard(tile *Tile) {
@@ -235,11 +357,11 @@ func (b *Board) addCandidates(tile Tile) {
 	candidateY := tile.Y + tile.CurH
 	if candidateY < b.Size.Y {
 		if tile.X == 0 { //left border counts as corner
-			b.addCandidate(core.Coord{X: 0, Y: candidateY})
+			b.addCandidate(b.makeNewGap(&core.Coord{X: 0, Y: candidateY}))
 		} else if b.board[tile.X-1][candidateY] != 0 {
 			for x := tile.X; x < tile.X+tile.CurW; x++ {
 				if b.board[x][candidateY] == 0 {
-					b.addCandidate(core.Coord{X: x, Y: candidateY})
+					b.addCandidate(b.makeNewGap(&core.Coord{X: x, Y: candidateY}))
 					break
 				}
 			}
@@ -250,11 +372,11 @@ func (b *Board) addCandidates(tile Tile) {
 	candidateX := tile.X + tile.CurW
 	if candidateX < b.Size.X {
 		if tile.Y == 0 { //always add candidate if tile on bottom
-			b.addCandidate(core.Coord{X: candidateX, Y: 0})
+			b.addCandidate(b.makeNewGap(&core.Coord{X: candidateX, Y: 0}))
 		} else if b.board[candidateX][tile.Y-1] != 0 {
 			for y := tile.Y; y < tile.Y+tile.CurH; y++ {
 				if b.board[candidateX][y] == 0 {
-					b.addCandidate(core.Coord{X: candidateX, Y: y})
+					b.addCandidate(b.makeNewGap(&core.Coord{X: candidateX, Y: y}))
 					break
 				}
 			}
@@ -277,7 +399,7 @@ func (b *Board) RemoveLastTile() {
 	b.removeTileFromPairTree(&tile)
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
-	b.addCandidate(core.Coord{X: tile.X, Y: tile.Y})
+	b.addCandidate(b.makeNewGap(&core.Coord{X: tile.X, Y: tile.Y}))
 	if b.lastCollision != nil && b.lastCollision.Index == tile.Index {
 		b.lastCollision = nil
 	}
@@ -289,13 +411,13 @@ func (b *Board) removeCandidates(tile Tile) {
 	if len(b.Candidates) == 0 {
 		return
 	}
-	cand := b.Candidates[len(b.Candidates)-1]
+	cand := b.Candidates[len(b.Candidates)-1].Pos
 	if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
 		b.Candidates = b.Candidates[:len(b.Candidates)-1]
 		if len(b.Candidates) == 0 {
 			return
 		}
-		cand = b.Candidates[len(b.Candidates)-1]
+		cand = b.Candidates[len(b.Candidates)-1].Pos
 		if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
 			b.Candidates = b.Candidates[:len(b.Candidates)-1]
 		}

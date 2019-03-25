@@ -59,7 +59,7 @@ func drawBoard(board Board, scale int) *image.RGBA {
 	}
 
 	for _, cand := range board.Candidates {
-		drawCandidate(picture, cand, color.RGBA{R: 255, A: 255}, scale, height-1)
+		drawCandidate(picture, cand.Pos, color.RGBA{R: 255, A: 255}, scale, height-1)
 	}
 
 	return picture

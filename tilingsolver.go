@@ -39,6 +39,7 @@ var outputDir = flag.String("output_dir", "", "Directory where output should go"
 func main() {
 	start2 := time.Now()
 	results := solveAsQas8()
+	log.Println(len(results))
 	log.Println(results)
 	elapsed2 := time.Since(start2)
 	log.Println("time: ", elapsed2)

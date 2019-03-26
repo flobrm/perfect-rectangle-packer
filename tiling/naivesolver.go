@@ -1,6 +1,7 @@
 package tiling
 
 import (
+	"fmt"
 	"localhost/flobrm/tilingsolver/core"
 	"time"
 )
@@ -15,6 +16,10 @@ var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 // and the tiles as placed on the board at the last step
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
 	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint, []core.TilePlacement) {
+
+	checkLeftSideGaps := true
+	checkOnlyNextCandidate := false
+
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
 		tiles[i] = NewTile(tileDims[i].X, tileDims[i].Y)
@@ -71,17 +76,16 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 
 	for {
-		// if step >= 0 { //&& step < 8500 {
-		// 	// fmt.Println("step: ", step)
-		// 	SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		// }
-		// if step >= 8548 {
+		if step >= 0 { //&& step < 8500 {
+			// fmt.Println("step: ", step)
+			SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		}
+		// if step >= 2091 {
 		// 	fmt.Println("start debugging here")
 		// }
 		// if step == 500 {
 		// 	return solutions
 		// }
-
 		//check for stop conditions
 		if stop != nil {
 			if len(placedTileIndex) == len(stop) {
@@ -141,25 +145,37 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 				if startRotation == false && board.Place(&tiles[i], false) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					// fmt.Println("placed tile normal", board)
-					startIndex = 0
-					startRotation = false
-					placedThisRound = true
-					placedTileIndex = append(placedTileIndex, i)
-					tilesPlaced++
-					totalTilesPlaced++
-					break
+					if board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+						board.RemoveLastTile()
+						tiles[i].Remove()
+						totalTilesPlaced++
+					} else {
+						startIndex = 0
+						startRotation = false
+						placedThisRound = true
+						placedTileIndex = append(placedTileIndex, i)
+						tilesPlaced++
+						totalTilesPlaced++
+						break
+					}
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
 				if board.Place(&tiles[i], true) { // place turned
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
-					startIndex = 0
-					startRotation = false
-					placedThisRound = true
-					placedTileIndex = append(placedTileIndex, i)
-					tilesPlaced++
-					totalTilesPlaced++
-					break
+					if board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+						board.RemoveLastTile()
+						tiles[i].Remove()
+						totalTilesPlaced++
+					} else {
+						startIndex = 0
+						startRotation = false
+						placedThisRound = true
+						placedTileIndex = append(placedTileIndex, i)
+						tilesPlaced++
+						totalTilesPlaced++
+						break
+					}
 				}
 				startRotation = false
 			}

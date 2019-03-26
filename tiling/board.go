@@ -20,7 +20,7 @@ type Board struct {
 func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
 	// candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
-	candidates := append(make([]gap, len(tiles))[:0], gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y})
+	candidates := append(make([]gap, len(tiles))[:0], gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y, active: true})
 	board := make([][]uint8, boardDims.X)
 	gapTable, maxGapTable := buildGapTable(tiles, 15, 20) //TODO make this a variable
 
@@ -126,12 +126,12 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 
 	//TODO check if gap is plausible
 
-	// notIllegalPair := b.updateNeighborsTree(tile)
-	// if !notIllegalPair {
-	// 	b.removeTileFromPairTree(tile)
-	// 	tile.Remove()
-	// 	return false
-	// }
+	notIllegalPair := b.updateNeighborsTree(tile)
+	if !notIllegalPair {
+		b.removeTileFromPairTree(tile)
+		tile.Remove()
+		return false
+	}
 
 	// return true
 	return true
@@ -228,12 +228,12 @@ func (b *Board) rightGapHeight(pos *core.Coord, width int) int {
 		return b.Size.Y - pos.Y
 	}
 	curY := pos.Y
-	for curY < b.Size.Y && b.board[pos.X][curY] != 0 && b.board[pos.X-1][curY] == 0 {
-		index := b.board[pos.X][curY] - 1
+	for curY < b.Size.Y && b.board[rightX][curY] != 0 && b.board[rightX-1][curY] == 0 {
+		index := b.board[rightX][curY] - 1
 		curY = b.Tiles[index].Y + b.Tiles[index].CurH
 	}
 
-	return pos.Y - curY
+	return curY - pos.Y
 }
 
 func (b *Board) gapWidth(pos *core.Coord) int {
@@ -276,6 +276,25 @@ func (b *Board) makeFromOldGap(oldGap *gap, newPos *core.Coord) gap {
 
 	}
 	return newGap
+}
+
+func (b *Board) updateGap(g *gap) {
+	g.W = b.gapWidth(&g.Pos)
+	g.H = Min(b.leftGapHeight(&g.Pos), b.rightGapHeight(&g.Pos, g.W))
+	g.active = g.H > 0
+}
+
+func (b *Board) updateExistingCandidates(tile *Tile) {
+	for i, gap := range b.Candidates {
+		//Only update if the tile is inside, or directly adjacent to a gap
+		if tile.Y+tile.CurH <= gap.Pos.Y || tile.Y > gap.Pos.Y+gap.H {
+			continue
+		}
+		if tile.X > gap.Pos.X+gap.W || tile.X+tile.CurW <= gap.Pos.X {
+			continue
+		}
+		b.updateGap(&b.Candidates[i])
+	}
 }
 
 // gapIsUnfillable returns true if there is no way to sum to the area of a gap with the unplaced tiles.
@@ -321,6 +340,7 @@ func (b *Board) placeTile(tile *Tile, turned bool) {
 	b.putTileOnBoard(tile)
 	b.Tiles = append(b.Tiles, tile)
 	b.Candidates = b.Candidates[:candIndex] //remove last candidate
+	b.updateExistingCandidates(tile)
 	b.addCandidates(*tile)
 }
 

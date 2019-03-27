@@ -7,9 +7,9 @@ import (
 )
 
 //Debug locations
-// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // SolveNaive is a depth first solver without many clever optimizations
 // returns a map with solutions, the reason for stopping, the number of steps taken,
@@ -17,8 +17,9 @@ var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
 	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint, []core.TilePlacement) {
 
-	checkLeftSideGaps := true
-	checkOnlyNextCandidate := false
+	checkGaps := false
+	checkLeftSideGaps := false
+	checkOnlyNextCandidate := true
 
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
@@ -145,7 +146,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 				if startRotation == false && board.Place(&tiles[i], false) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					// fmt.Println("placed tile normal", board)
-					if board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
 						board.RemoveLastTile()
 						tiles[i].Remove()
 						totalTilesPlaced++
@@ -163,7 +164,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 				if board.Place(&tiles[i], true) { // place turned
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
-					if board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
 						board.RemoveLastTile()
 						tiles[i].Remove()
 						totalTilesPlaced++

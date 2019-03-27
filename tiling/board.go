@@ -144,12 +144,12 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 
 	//TODO check if gap is plausible
 
-	notIllegalPair := b.updateNeighborsTree(tile)
-	if !notIllegalPair {
-		b.removeTileFromPairTree(tile)
-		tile.Remove()
-		return false
-	}
+	// notIllegalPair := b.updateNeighborsTree(tile)
+	// if !notIllegalPair {
+	// 	b.removeTileFromPairTree(tile)
+	// 	tile.Remove()
+	// 	return false
+	// }
 
 	// return true
 	return true

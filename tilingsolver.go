@@ -37,14 +37,6 @@ var jobsFile = flag.String("input_file", "", "File with puzzles/jobs")
 var outputDir = flag.String("output_dir", "", "Directory where output should go")
 
 func main() {
-	start2 := time.Now()
-	results := solveAsQas8()
-	log.Println(len(results))
-	log.Println(results)
-	elapsed2 := time.Since(start2)
-	log.Println("time: ", elapsed2)
-	return
-
 	flag.Parse()
 	//profiling cpu if cpuprofile is specified
 	if *cpuprofile != "" {
@@ -57,6 +49,14 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+
+	// start2 := time.Now()
+	// results := solveAsQas20()
+	// log.Println(len(results))
+	// log.Println(results)
+	// elapsed2 := time.Since(start2)
+	// log.Println("time: ", elapsed2)
+	// return
 
 	if *solverID <= 0 {
 		fmt.Println("No, or illegal, solver_id specified")
@@ -76,15 +76,15 @@ func main() {
 		taskReader := tileio.NewPuzzleCSVReader(*jobsFile)
 		//TODO setup output stuff, for now print to output
 		//outputer
-		// solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
-		solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
+		solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
+		// solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers)
 	} else if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution)
 	} else {
 		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution)
 	}
 	// fmt.Print(len(solveAsQas8()))
-	fmt.Println(len(solveTestCase()))
+	// fmt.Println(len(solveTestCase()))
 
 	elapsed := time.Since(start)
 	log.Println("time: ", elapsed)
@@ -225,7 +225,7 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 		log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
 		log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
 		puzzlesSolved++
-
+		log.Fatal("quiting early")
 	}
 	log.Println("finished all puzzles")
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")
@@ -265,13 +265,15 @@ func solveAsQas8() map[string]int {
 	return result
 }
 
-func solveAsQas20() {
+func solveAsQas20() map[string]int {
 	// build asqas 20
 	var tiles [20]core.Coord
 	for i := range tiles {
 		tiles[19-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	tiling.SolveNaive(core.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false)
+	results, _, steps, _ := tiling.SolveNaive(core.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), true)
+	fmt.Println("steps", steps)
+	return results
 }
 
 func solveFromFile(filePath *string) {

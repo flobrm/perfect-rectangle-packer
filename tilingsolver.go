@@ -225,7 +225,7 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 		log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)
 		log.Println(len(solutions), "solutions found for puzzle ", puzzle.PuzzleID)
 		puzzlesSolved++
-		log.Fatal("quiting early")
+		// log.Fatal("quiting early")
 	}
 	log.Println("finished all puzzles")
 	log.Println("finished, solved ", puzzlesSolved, " puzzles")

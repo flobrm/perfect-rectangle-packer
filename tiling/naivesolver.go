@@ -1,15 +1,14 @@
 package tiling
 
 import (
-	"fmt"
 	"localhost/flobrm/tilingsolver/core"
 	"time"
 )
 
 //Debug locations
-var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 
-// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // SolveNaive is a depth first solver without many clever optimizations
 // returns a map with solutions, the reason for stopping, the number of steps taken,
@@ -17,9 +16,9 @@ var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
 	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint, []core.TilePlacement) {
 
-	checkGaps := false
-	checkLeftSideGaps := false
-	checkOnlyNextCandidate := true
+	checkGaps := true
+	checkLeftSideGaps := true
+	checkOnlyNextCandidate := false
 
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
@@ -77,11 +76,11 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 
 	for {
-		if step >= 0 { //&& step < 8500 {
-			// fmt.Println("step: ", step)
-			SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		}
-		// if step >= 2091 {
+		// if step >= 0 { //&& step < 8500 {
+		// 	// fmt.Println("step: ", step)
+		// 	SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		// }
+		// if step >= 34 {
 		// 	fmt.Println("start debugging here")
 		// }
 		// if step == 500 {
@@ -147,6 +146,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					// fmt.Println("fitting tile normal", tiles[i])
 					// fmt.Println("placed tile normal", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+						// SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d_s%2d.png", imgPath, step, i), 5)
 						board.RemoveLastTile()
 						tiles[i].Remove()
 						totalTilesPlaced++
@@ -165,6 +165,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
+						// SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d_t%2d.png", imgPath, step, i), 5)
 						board.RemoveLastTile()
 						tiles[i].Remove()
 						totalTilesPlaced++

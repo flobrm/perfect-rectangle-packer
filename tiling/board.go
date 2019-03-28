@@ -97,6 +97,9 @@ func (b *Board) Place(tile *Tile, turned bool) bool {
 
 //HasUnfillableGaps check in different ways if there are unfillable gaps on the board
 func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool) bool {
+	if len(b.Candidates) == 0 {
+		return false
+	}
 	if onlyNextCandidate {
 		nextGap := &b.Candidates[len(b.Candidates)-1]
 		if b.gapIsUnfillable(nextGap) {
@@ -144,12 +147,12 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 
 	//TODO check if gap is plausible
 
-	// notIllegalPair := b.updateNeighborsTree(tile)
-	// if !notIllegalPair {
-	// 	b.removeTileFromPairTree(tile)
-	// 	tile.Remove()
-	// 	return false
-	// }
+	notIllegalPair := b.updateNeighborsTree(tile)
+	if !notIllegalPair {
+		b.removeTileFromPairTree(tile)
+		tile.Remove()
+		return false
+	}
 
 	// return true
 	return true
@@ -256,10 +259,10 @@ func (b *Board) updateGap(g *gap) {
 func (b *Board) updateExistingCandidates(tile *Tile) {
 	for i, gap := range b.Candidates {
 		//Only update if the tile is inside, or directly adjacent to a gap
-		if tile.Y+tile.CurH <= gap.Pos.Y || tile.Y > gap.Pos.Y+gap.H {
+		if tile.Y+tile.CurH < gap.Pos.Y || tile.Y > gap.Pos.Y+gap.H {
 			continue
 		}
-		if tile.X > gap.Pos.X+gap.W || tile.X+tile.CurW <= gap.Pos.X {
+		if tile.X > gap.Pos.X+gap.W || tile.X+tile.CurW < gap.Pos.X {
 			continue
 		}
 		b.updateGap(&b.Candidates[i])
@@ -412,6 +415,7 @@ func (b *Board) RemoveLastTile() {
 	b.removeTileFromPairTree(&tile)
 	b.removeCandidates(tile)
 	b.removeTileFromBoard(&tile)
+	b.updateExistingCandidates(&tile)
 	b.addCandidate(b.makeNewGap(&core.Coord{X: tile.X, Y: tile.Y}))
 	if b.lastCollision != nil && b.lastCollision.Index == tile.Index {
 		b.lastCollision = nil
@@ -605,7 +609,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X+tileAddition.CurW][tileAddition.Y] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.Y == tileAddition.Y && other.CurH == tileAddition.CurH {
-					if other.Index > tileAddition.Index {
+					if other.Index < tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it
@@ -626,7 +630,7 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 			otherIndex := b.board[tileAddition.X][tileAddition.Y-1] - 1
 			for other := b.Tiles[otherIndex]; other != nil; other = other.parent {
 				if other.X == tileAddition.X && other.CurW == tileAddition.CurW {
-					if other.Index > tileAddition.Index {
+					if other.Index < tileAddition.Index {
 						return false // found an illegal pair
 					}
 					//There is a legal pairing, see what to do about it

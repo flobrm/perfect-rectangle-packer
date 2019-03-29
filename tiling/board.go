@@ -87,8 +87,8 @@ func Max(a, b int) int {
 }
 
 //Place places a tile on the board if it is possible. It returns whether the tile was placed
-func (b *Board) Place(tile *Tile, turned bool) bool {
-	if b.fits(tile, turned) {
+func (b *Board) Place(tile *Tile, turned bool, checkFullSSN bool) bool {
+	if b.fits(tile, turned, checkFullSSN) {
 		b.placeTile(tile, turned)
 		return true
 	}
@@ -121,7 +121,7 @@ func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool
 
 //Fits checks if a tile fits the board at the next position to fill
 //TODO merge with Place
-func (b *Board) fits(tile *Tile, turned bool) bool {
+func (b *Board) fits(tile *Tile, turned bool, checkFullSSN bool) bool {
 	gap := b.Candidates[len(b.Candidates)-1]
 
 	tile.Place(gap.Pos, turned)
@@ -147,11 +147,13 @@ func (b *Board) fits(tile *Tile, turned bool) bool {
 
 	//TODO check if gap is plausible
 
-	notIllegalPair := b.updateNeighborsTree(tile)
-	if !notIllegalPair {
-		b.removeTileFromPairTree(tile)
-		tile.Remove()
-		return false
+	if checkFullSSN {
+		notIllegalPair := b.updateNeighborsTree(tile)
+		if !notIllegalPair {
+			b.removeTileFromPairTree(tile)
+			tile.Remove()
+			return false
+		}
 	}
 
 	// return true

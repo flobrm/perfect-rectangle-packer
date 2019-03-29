@@ -1,24 +1,38 @@
 package tiling
 
 import (
+	"fmt"
 	"localhost/flobrm/tilingsolver/core"
 	"time"
 )
 
-//Debug locations
-// var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+//These constants show which optimizations are available for the current solver
+const (
+	FullSSNCheck        = iota
+	OneLevelSSN         = iota
+	DoGapdetection      = iota
+	OneGapDetection     = iota
+	AllDownGapDetection = iota
+	LeftGapDetection    = iota
+	TotalGapAreaCheck   = iota
+)
 
-var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
+//Debug locations
+var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
+
+// var imgPath = "/home/florian/golang/src/localhost/flobrm/tilingsolver/img/"
 
 // SolveNaive is a depth first solver without many clever optimizations
 // returns a map with solutions, the reason for stopping, the number of steps taken,
 // and the tiles as placed on the board at the last step
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
-	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool) (map[string]int, string, uint, []core.TilePlacement) {
+	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool, optimizations map[int]bool) (
+	map[string]int, string, uint, []core.TilePlacement) {
 
-	checkGaps := true
-	checkLeftSideGaps := true
-	checkOnlyNextCandidate := false
+	checkGaps := optimizations[DoGapdetection]
+	checkFullSSN := optimizations[FullSSNCheck]
+	checkLeftSideGaps := optimizations[LeftGapDetection]
+	checkOnlyNextCandidate := !optimizations[AllDownGapDetection]
 
 	tiles := make([]Tile, len(tileDims))
 	for i := range tileDims {
@@ -50,7 +64,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			return solutions, "solved", totalTilesPlaced, nil
 		}
 		for _, placement := range start {
-			if board.Place(&tiles[placement.Idx], placement.Rot) {
+			if board.Place(&tiles[placement.Idx], placement.Rot, checkFullSSN) {
 				tilesPlaced++
 				placedTileIndex = append(placedTileIndex, placement.Idx)
 			} else {
@@ -80,7 +94,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		// 	// fmt.Println("step: ", step)
 		// 	SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
 		// }
-		// if step >= 34 {
+		// if step >= 3 {
 		// 	fmt.Println("start debugging here")
 		// }
 		// if step == 500 {
@@ -113,7 +127,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			// if step == 1867505 {
 			// 	fmt.Println("stop to check stuff")
 			// }
-			// SaveBoardPic(board, fmt.Sprintf("%s%010dFirstSolution.png", imgPath, step), 5)
+			SaveBoardPic(board, fmt.Sprintf("%s%010dFirstSolution.png", imgPath, step), 5)
 			newSolution := make([]Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
@@ -142,7 +156,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
 				// fmt.Println("trying to fit tile", tiles[i])
-				if startRotation == false && board.Place(&tiles[i], false) { //place normal
+				if startRotation == false && board.Place(&tiles[i], false, checkFullSSN) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					// fmt.Println("placed tile normal", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {
@@ -161,7 +175,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					}
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
-				if board.Place(&tiles[i], true) { // place turned
+				if board.Place(&tiles[i], true, checkFullSSN) { // place turned
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps) {

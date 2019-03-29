@@ -133,7 +133,7 @@ func TestVisualizer() {
 	board := NewBoard(core.Coord{X: 16, Y: 15}, make([]Tile, 8)[:0])
 	tileA := NewTile(9, 8)
 	tileA.Place(core.Coord{X: 0, Y: 1}, false)
-	board.Place(&tileA, false)
+	board.Place(&tileA, false, false)
 
 	SaveBoardPic(board, "img/testpic.png", 10)
 

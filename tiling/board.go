@@ -96,7 +96,7 @@ func (b *Board) Place(tile *Tile, turned bool, checkFullSSN bool) bool {
 }
 
 //HasUnfillableGaps check in different ways if there are unfillable gaps on the board
-func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool) bool {
+func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool, checkTotalGapArea bool) bool {
 	if len(b.Candidates) == 0 {
 		return false
 	}
@@ -112,6 +112,11 @@ func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool
 	}
 	if checkGapsFromLeft {
 		if b.hasUnfillableLeftSideGaps() {
+			return true
+		}
+	}
+	if checkTotalGapArea {
+		if b.totalGapAreaTooBig() {
 			return true
 		}
 	}
@@ -319,6 +324,52 @@ func (b *Board) leftSideGapIsUnfillable(g *gap) bool {
 	if maxArea < targetArea {
 		return true
 	}
+	return false
+}
+
+func (b *Board) totalGapAreaTooBig() bool {
+	if len(b.Candidates) == 0 {
+		return false
+	}
+	//find largest active gap and sum gap totals
+	totalGapArea := 0
+	widestGapIndex := 0
+	for i, gap := range b.Candidates {
+		if !gap.active {
+			continue
+		}
+		//Make sure that widestGapIndex refers to an active gap
+		if totalGapArea == 0 {
+			totalGapArea += gap.W * gap.H
+			widestGapIndex = i
+			continue
+		}
+		if gap.W > b.Candidates[widestGapIndex].W {
+			widestGapIndex = i
+		}
+		totalGapArea = gap.W * gap.H
+	}
+
+	//lookup max area for max gap
+	widestGap := b.Candidates[widestGapIndex]
+
+	if widestGap.W+1 > len(b.gapTable) || widestGap.H+1 > len(b.gapTable[0]) {
+		return false
+	}
+	targetArea := widestGap.W * widestGap.H
+	maxArea := b.maxGapTable[widestGap.W][widestGap.H]
+	if maxArea < targetArea {
+		return true
+	}
+	for _, tile := range b.Tiles { // remove the areas of already placed tiles
+		maxArea -= b.gapTable[widestGap.W][widestGap.H][tile.Index]
+	}
+	//compare
+	if maxArea < widestGap.W*widestGap.H {
+		// fmt.Println("gap area too big")
+		return true
+	}
+
 	return false
 }
 

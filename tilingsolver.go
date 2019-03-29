@@ -38,7 +38,7 @@ var gapDetectionCheck = flag.Bool("gap_detection_check", true, "Enable gap detec
 var nextGapDetectionCheck = flag.Bool("next_gap_check", true, "check the next gap where a tile will be placed")
 var allDownDetectionCheck = flag.Bool("all_down_gap_check", true, "check all normal gaps")
 var leftSideGapCheck = flag.Bool("left_side_gaps_check", true, "check gaps from the left side to the frame top")
-var totalGapAreaCheck = flag.Bool("total_gap_area_check", false, "check if the total gap area can be filled") //TODO not implemented yet
+var totalGapAreaCheck = flag.Bool("total_gap_area_check", false, "check if the total gap area can be filled") //Turned of because it doesn't work or is never triggered
 
 // File based multithreaded options
 var numSolvers = flag.Int("workers", 1, "number of worker threads")

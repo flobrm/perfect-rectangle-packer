@@ -23,7 +23,7 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	firstGap := gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y, leftH: boardDims.Y, active: true, leftSideActive: true}
 	candidates := append(make([]gap, len(tiles))[:0], firstGap)
 	board := make([][]uint8, boardDims.X)
-	gapTable, maxGapTable := buildGapTable(tiles, 15, 20) //TODO make this a variable
+	gapTable, maxGapTable := buildGapTable(tiles, boardDims.X, boardDims.Y) //TODO make this a variable
 
 	for i := 0; i < len(board); i++ {
 		board[i] = make([]uint8, boardDims.Y)

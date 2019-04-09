@@ -33,8 +33,22 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	checkLeftSideGaps := optimizations[LeftGapDetection]
 	checkOnlyNextCandidate := !optimizations[AllDownGapDetection]
 	checkTotalGapArea := optimizations[TotalGapAreaCheck]
+	setUprightBoard := true
+	boardFlipped := false
 
 	tiles := make([]Tile, len(tileDims))
+	if setUprightBoard && boardDims.X > boardDims.Y {
+		boardFlipped = true
+		tempX := boardDims.X
+		boardDims.X = boardDims.Y
+		boardDims.Y = tempX
+		for i := range start {
+			start[i].Rot = !start[i].Rot
+		}
+		for i := range stop {
+			stop[i].Rot = !stop[i].Rot
+		}
+	}
 	for i := range tileDims {
 		tiles[i] = NewTile(tileDims[i].X, tileDims[i].Y)
 		tiles[i].Index = i
@@ -98,7 +112,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		// 	fmt.Println("start debugging here")
 		// }
 		// if step == 500 {
-		// 	return solutions
+		// 	return solutions, "interrupted", totalTilesPlaced, nil
 		// }
 		//check for stop conditions
 		if stop != nil {
@@ -120,7 +134,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			}
 		}
 		if time.Now().After(endTime) {
-			return solutions, "interrupted", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles)
+			return solutions, "interrupted", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles, boardFlipped)
 		}
 
 		if tilesPlaced == numTiles {
@@ -131,10 +145,13 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			newSolution := make([]Tile, numTiles)
 			copy(newSolution, tiles)
 			board.GetCanonicalSolution(&newSolution)
+			if boardFlipped {
+				rotateTiles(&newSolution)
+			}
 			preLength := len(solutions)
 			solutions[TileSliceToJSON(newSolution)] = 1
 			if stopOnSolution {
-				return solutions, "solved1", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles)
+				return solutions, "solved1", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles, boardFlipped)
 			}
 
 			if len(solutions) != preLength {
@@ -228,10 +245,27 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 }
 
-func getCurrentPlacements(tileIndexes []int, tiles []Tile) []core.TilePlacement {
+func getCurrentPlacements(tileIndexes []int, tiles []Tile, boardFlipped bool) []core.TilePlacement {
 	placements := make([]core.TilePlacement, len(tileIndexes))[:0]
 	for _, idx := range tileIndexes {
-		placements = append(placements, core.TilePlacement{Idx: idx, Rot: tiles[idx].Turned})
+		if boardFlipped {
+			placements = append(placements, core.TilePlacement{Idx: idx, Rot: !tiles[idx].Turned})
+		} else {
+			placements = append(placements, core.TilePlacement{Idx: idx, Rot: tiles[idx].Turned})
+		}
 	}
 	return placements
+}
+
+func rotateTiles(tiles *[]Tile) {
+	for i := range *tiles {
+		tempX := (*tiles)[i].X
+		(*tiles)[i].X = (*tiles)[i].Y
+		(*tiles)[i].Y = tempX
+		(*tiles)[i].Turned = !(*tiles)[i].Turned
+
+		tempCurW := (*tiles)[i].X
+		(*tiles)[i].CurW = (*tiles)[i].CurH
+		(*tiles)[i].CurH = tempCurW
+	}
 }

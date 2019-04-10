@@ -39,6 +39,7 @@ var nextGapDetectionCheck = flag.Bool("next_gap_check", true, "check the next ga
 var allDownDetectionCheck = flag.Bool("all_down_gap_check", true, "check all normal gaps")
 var leftSideGapCheck = flag.Bool("left_side_gaps_check", true, "check gaps from the left side to the frame top")
 var totalGapAreaCheck = flag.Bool("total_gap_area_check", false, "check if the total gap area can be filled") //Turned of because it doesn't work or is never triggered
+var forceFrameUpright = flag.Bool("force_frame_upright", true, "Rotate the frame, start, and stop so the shortest frame side is used as the width.")
 
 // File based multithreaded options
 var numSolvers = flag.Int("workers", 1, "number of worker threads")
@@ -86,6 +87,7 @@ func main() {
 	optimizationFlags[tiling.AllDownGapDetection] = *allDownDetectionCheck
 	optimizationFlags[tiling.LeftGapDetection] = *leftSideGapCheck
 	optimizationFlags[tiling.TotalGapAreaCheck] = *totalGapAreaCheck
+	optimizationFlags[tiling.ForceFrameUpright] = *forceFrameUpright
 
 	start := time.Now()
 
@@ -262,6 +264,7 @@ func getDefaultOptimizations() map[int]bool {
 		tiling.AllDownGapDetection: true,
 		tiling.LeftGapDetection:    true,
 		tiling.TotalGapAreaCheck:   true,
+		tiling.ForceFrameUpright:   true,
 	}
 	return optimizations
 }

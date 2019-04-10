@@ -14,6 +14,7 @@ const (
 	AllDownGapDetection = iota
 	LeftGapDetection    = iota
 	TotalGapAreaCheck   = iota
+	ForceFrameUpright   = iota
 )
 
 //Debug locations
@@ -33,7 +34,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	checkLeftSideGaps := optimizations[LeftGapDetection]
 	checkOnlyNextCandidate := !optimizations[AllDownGapDetection]
 	checkTotalGapArea := optimizations[TotalGapAreaCheck]
-	setUprightBoard := true
+	setUprightBoard := optimizations[ForceFrameUpright]
 	boardFlipped := false
 
 	tiles := make([]Tile, len(tileDims))
@@ -108,27 +109,29 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		// 	// fmt.Println("step: ", step)
 		// 	SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
 		// }
-		// if step >= 3 {
+		// if step >= 5000 {
 		// 	fmt.Println("start debugging here")
 		// }
-		// if step == 20000000 {
+		// if step == 6000 {
 		// 	return solutions, "interrupted", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles, boardFlipped)
 		// }
 		//check for stop conditions
 		if stop != nil {
 			if len(placedTileIndex) == len(stop) {
 				for i, placement := range stop {
-					if placedTileIndex[i] < placement.Idx {
+					if placedTileIndex[i] < placement.Idx || placedTileIndex[i] == placement.Idx && placement.Rot && !tiles[placedTileIndex[i]].Turned {
 						break
 					}
 					if placedTileIndex[i] > placement.Idx ||
-						placedTileIndex[i] == placement.Idx && !placement.Rot && tiles[placement.Idx].Turned {
+						placedTileIndex[i] == placement.Idx && !placement.Rot && tiles[placement.Idx].Turned ||
+						i == len(stop)-1 && placedTileIndex[i] == placement.Idx && placement.Rot == tiles[placement.Idx].Turned {
 						// fmt.Println(step)
 						// fmt.Println(tiles)
 						// fmt.Println(stop)
 						// fmt.Println(placedTileIndex)
-						//SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-						return solutions, "solved", totalTilesPlaced, nil
+						// SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+						// fmt.Println("past stopper")
+						return solutions, "solved", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles, boardFlipped)
 					}
 				}
 			}

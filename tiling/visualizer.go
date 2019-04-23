@@ -59,7 +59,7 @@ func drawBoard(board Board, scale int) *image.RGBA {
 	}
 
 	for _, cand := range board.Candidates {
-		drawCandidate(picture, cand, color.RGBA{R: 255, A: 255}, scale, height-1)
+		drawCandidate(picture, cand.Pos, color.RGBA{R: 255, A: 255}, scale, height-1)
 	}
 
 	return picture
@@ -133,7 +133,7 @@ func TestVisualizer() {
 	board := NewBoard(core.Coord{X: 16, Y: 15}, make([]Tile, 8)[:0])
 	tileA := NewTile(9, 8)
 	tileA.Place(core.Coord{X: 0, Y: 1}, false)
-	board.PlaceTile(&tileA, false)
+	board.Place(&tileA, false, false)
 
 	SaveBoardPic(board, "img/testpic.png", 10)
 

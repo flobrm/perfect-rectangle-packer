@@ -9,12 +9,18 @@ import (
 /*Tile is a puzzle piece
  */
 type Tile struct {
-	W, H, X, Y int
-	CurW       int  `json:"-"`
-	CurH       int  `json:"-"`
-	Placed     bool `json:"-"`
-	Turned     bool `json:"T"`
-	Index      int  `json:"-"`
+	W, H, X, Y             int
+	CurW                   int  `json:"-"`
+	CurH                   int  `json:"-"`
+	Placed                 bool `json:"-"`
+	Turned                 bool `json:"T"`
+	Index                  int  `json:"-"`
+	parent, lChild, rChild *Tile
+}
+
+// TilePair is a way to store two pairs, and keep track of them
+type TilePair struct {
+	a, b *Tile
 }
 
 //NewTile initializes tile

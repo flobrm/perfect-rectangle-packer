@@ -6,9 +6,10 @@ import (
 
 //Board stores the board and everything placed on it
 type Board struct {
-	Size       core.Coord //width and hight of the board
-	Tiles      [](*Tile)  //All the placed tiles
-	Candidates []gap
+	Size  core.Coord //width and hight of the board
+	Tiles [](*Tile)  //All the placed tiles
+	// Candidates []gap
+	candidates candidateList
 	// Candidates    []core.Coord //Candidate positions for next placement
 	board         [][]uint8 // first x then y
 	gapTable      [][][]int //lookup table for impossible gaps, in order width, height, tileIndex

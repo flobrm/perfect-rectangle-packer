@@ -58,7 +58,7 @@ func drawBoard(board Board, scale int) *image.RGBA {
 		drawTile(picture, *tile, colorscheme[i%len(colorscheme)], scale, height-1)
 	}
 
-	for _, cand := range board.Candidates {
+	for _, cand := range board.candidates.candidates {
 		drawCandidate(picture, cand.Pos, color.RGBA{R: 255, A: 255}, scale, height-1)
 	}
 

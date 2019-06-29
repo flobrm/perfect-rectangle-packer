@@ -22,7 +22,9 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	myTiles := make([](*Tile), len(tiles))
 	// candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
 	firstGap := gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y, leftH: boardDims.Y, active: true, leftSideActive: true}
-	candidates := append(make([]gap, len(tiles))[:0], firstGap)
+	// candidates := append(make([]gap, len(tiles))[:0], firstGap)
+	candidates := newCandidateList(len(tiles))
+	candidates.addCandidate(firstGap)
 	board := make([][]uint8, boardDims.X)
 	gapTable, maxGapTable := buildGapTable(tiles, boardDims.X, boardDims.Y) //TODO make this a variable
 
@@ -30,9 +32,10 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 		board[i] = make([]uint8, boardDims.Y)
 	}
 	return Board{
-		Size:        core.Coord{X: boardDims.X, Y: boardDims.Y},
-		Tiles:       myTiles[:0],
-		Candidates:  candidates,
+		Size:  core.Coord{X: boardDims.X, Y: boardDims.Y},
+		Tiles: myTiles[:0],
+		//Candidates:  candidates,
+		candidates:  candidates,
 		board:       board,
 		gapTable:    gapTable,
 		maxGapTable: maxGapTable,
@@ -68,7 +71,8 @@ func buildGapTable(tiles []Tile, maxGapWidth int, maxGapHeight int) ([][][]int, 
 }
 
 func (b *Board) addCandidate(newGap gap) {
-	b.Candidates = append(b.Candidates, newGap)
+	b.candidates.addCandidate(newGap)
+	// b.Candidates = append(b.Candidates, newGap)
 }
 
 //Min returns the min of two integers, why the fuck do I have to define this
@@ -98,11 +102,12 @@ func (b *Board) Place(tile *Tile, turned bool, checkFullSSN bool) bool {
 
 //HasUnfillableGaps check in different ways if there are unfillable gaps on the board
 func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool, checkTotalGapArea bool) bool {
-	if len(b.Candidates) == 0 {
+	if b.candidates.isEmpty() {
 		return false
 	}
 	if onlyNextCandidate {
-		nextGap := &b.Candidates[len(b.Candidates)-1]
+		// nextGap := &b.Candidates[len(b.Candidates)-1]
+		nextGap := b.candidates.nextGap()
 		if b.gapIsUnfillable(nextGap) {
 			return true
 		}
@@ -128,7 +133,8 @@ func (b *Board) HasUnfillableGaps(onlyNextCandidate bool, checkGapsFromLeft bool
 //Fits checks if a tile fits the board at the next position to fill
 //TODO merge with Place
 func (b *Board) fits(tile *Tile, turned bool, checkFullSSN bool) bool {
-	gap := b.Candidates[len(b.Candidates)-1]
+	// gap := b.Candidates[len(b.Candidates)-1]
+	gap := b.candidates.nextGap()
 
 	tile.Place(gap.Pos, turned)
 	if !b.tileFitsBoard(tile) {
@@ -183,8 +189,8 @@ func (g *gap) couldFit(tile *Tile) bool {
 
 func (b *Board) anyGapsUnfillable() bool {
 	//TODO check if all gaps combined could be fillable
-	for i := range b.Candidates {
-		if b.gapIsUnfillable(&b.Candidates[i]) {
+	for i := range b.candidates.candidates { //TODO abstract away, get iterator from candidatelist
+		if b.gapIsUnfillable(&b.candidates.candidates[i]) {
 			return true
 		}
 	}
@@ -192,9 +198,9 @@ func (b *Board) anyGapsUnfillable() bool {
 }
 
 func (b *Board) hasUnfillableLeftSideGaps() bool {
-	for i := range b.Candidates {
-		if b.Candidates[i].leftSideActive {
-			if b.leftSideGapIsUnfillable(&b.Candidates[i]) {
+	for i := range b.candidates.candidates { //TODO abstract away, get iterator from candidatelist
+		if b.candidates.candidates[i].leftSideActive {
+			if b.leftSideGapIsUnfillable(&b.candidates.candidates[i]) {
 				return true
 			}
 		}
@@ -265,7 +271,7 @@ func (b *Board) updateGap(g *gap) {
 }
 
 func (b *Board) updateExistingCandidates(tile *Tile) {
-	for i, gap := range b.Candidates {
+	for i, gap := range b.candidates.candidates {
 		//Only update if the tile is inside, or directly adjacent to a gap
 		if tile.Y+tile.CurH < gap.Pos.Y || tile.Y > gap.Pos.Y+gap.H {
 			continue
@@ -273,8 +279,9 @@ func (b *Board) updateExistingCandidates(tile *Tile) {
 		if tile.X > gap.Pos.X+gap.W || tile.X+tile.CurW < gap.Pos.X {
 			continue
 		}
-		b.updateGap(&b.Candidates[i])
+		b.updateGap(&b.candidates.candidates[i])
 	}
+	b.candidates.recalcNextCandidate()
 }
 
 // gapIsUnfillable returns true if there is no way to sum to the area of a gap with the unplaced tiles.
@@ -329,13 +336,13 @@ func (b *Board) leftSideGapIsUnfillable(g *gap) bool {
 }
 
 func (b *Board) totalGapAreaTooBig() bool {
-	if len(b.Candidates) == 0 {
+	if len(b.candidates.candidates) == 0 {
 		return false
 	}
 	//find largest active gap and sum gap totals
 	totalGapArea := 0
 	widestGapIndex := 0
-	for i, gap := range b.Candidates {
+	for i, gap := range b.candidates.candidates {
 		if !gap.active {
 			continue
 		}
@@ -345,14 +352,14 @@ func (b *Board) totalGapAreaTooBig() bool {
 			widestGapIndex = i
 			continue
 		}
-		if gap.W > b.Candidates[widestGapIndex].W {
+		if gap.W > b.candidates.candidates[widestGapIndex].W {
 			widestGapIndex = i
 		}
 		totalGapArea = gap.W * gap.H
 	}
 
 	//lookup max area for max gap
-	widestGap := b.Candidates[widestGapIndex]
+	widestGap := b.candidates.candidates[widestGapIndex]
 
 	if widestGap.W+1 > len(b.gapTable) || widestGap.H+1 > len(b.gapTable[0]) {
 		return false
@@ -385,11 +392,16 @@ func (b *Board) tileFitsBoard(tile *Tile) bool {
 
 //PlaceTile registers a tile as placed on the current spot to fill, Fits should be called first
 func (b *Board) placeTile(tile *Tile, turned bool) {
-	candIndex := len(b.Candidates) - 1
-	tile.Place(b.Candidates[candIndex].Pos, turned)
+	// candIndex := len(b.Candidates) - 1
+	// tile.Place(b.Candidates[candIndex].Pos, turned)
+	cand := b.candidates.nextGap()
+	tile.Place(cand.Pos, turned)
+
 	b.putTileOnBoard(tile)
 	b.Tiles = append(b.Tiles, tile)
-	b.Candidates = b.Candidates[:candIndex] //remove last candidate
+
+	b.candidates.removeNextGap()
+	// b.Candidates = b.Candidates[:candIndex] //remove last candidate
 	b.updateExistingCandidates(tile)
 	b.addCandidates(*tile)
 }
@@ -452,6 +464,7 @@ func (b *Board) addCandidates(tile Tile) {
 			}
 		}
 	}
+	b.candidates.recalcNextCandidate()
 }
 
 func (b *Board) posCollides(pos core.Coord) (collides bool, collider *Tile) {
@@ -479,38 +492,23 @@ func (b *Board) RemoveLastTile() {
 }
 
 func (b *Board) removeCandidates(tile Tile) {
-	if len(b.Candidates) == 0 {
-		return
-	}
-	cand := b.Candidates[len(b.Candidates)-1].Pos
-	if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
-		b.Candidates = b.Candidates[:len(b.Candidates)-1]
-		if len(b.Candidates) == 0 {
-			return
-		}
-		cand = b.Candidates[len(b.Candidates)-1].Pos
-		if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
-			b.Candidates = b.Candidates[:len(b.Candidates)-1]
-		}
-	}
-}
+	b.candidates.removeLatestCandidates(&tile)
+	b.candidates.recalcNextCandidate()
 
-func isRightCandidate(cand core.Coord, tile Tile) bool {
-	if cand.X == tile.X+tile.CurW {
-		if cand.Y >= tile.Y && cand.Y < tile.Y+tile.CurH {
-			return true
-		}
-	}
-	return false
-}
-
-func isTopCandidate(cand core.Coord, tile Tile) bool {
-	if cand.Y == tile.Y+tile.CurH {
-		if cand.X >= tile.X && cand.X < tile.X+tile.CurW {
-			return true
-		}
-	}
-	return false
+	// if len(b.candidates.candidates) == 0 {
+	// 	return
+	// }
+	// cand := b.Candidates[len(b.Candidates)-1].Pos
+	// if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
+	// 	b.Candidates = b.Candidates[:len(b.Candidates)-1]
+	// 	if len(b.Candidates) == 0 {
+	// 		return
+	// 	}
+	// 	cand = b.Candidates[len(b.Candidates)-1].Pos
+	// 	if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
+	// 		b.Candidates = b.Candidates[:len(b.Candidates)-1]
+	// 	}
+	// }
 }
 
 //Functions to flip new tiles horizontally or vertically

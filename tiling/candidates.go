@@ -3,17 +3,24 @@ package tiling
 import "localhost/flobrm/tilingsolver/core"
 
 type candidateList struct {
-	candidates    []gap
-	nextCandidate int
+	candidates     []gap
+	nextCandidate  int
+	candidateOrder int
 }
 
+const (
+	lastGapFirst     = iota
+	smallestGapFirst = iota
+)
+
 //newCandidateList is an easy way to get a candidatelist
-func newCandidateList(maxCandidates int) candidateList {
+func newCandidateList(maxCandidates int, candidateOrder int) candidateList {
 	candidates := make([]gap, maxCandidates)[:0]
 
 	return candidateList{
-		candidates:    candidates,
-		nextCandidate: 0,
+		candidates:     candidates,
+		nextCandidate:  0,
+		candidateOrder: candidateOrder,
 	}
 }
 
@@ -28,36 +35,38 @@ func (cl *candidateList) addCandidate(candidate gap) {
 //recalcNextCandidate picks a new next candidate according to a specific ruleset
 //The only available ruleset right now is last candidate added.
 func (cl *candidateList) recalcNextCandidate() {
-	cl.nextCandidate = len(cl.candidates) - 1
 
-	//other possible next candidate
-	smallestGapWidth := 999999999999
-	for i, gap := range cl.candidates {
-		if !gap.active {
-			continue
+	if cl.candidateOrder == smallestGapFirst {
+		smallestGapWidth := 999999999999
+		smallestGapHeight := 999999999999
+		for i, gap := range cl.candidates {
+			if !gap.active {
+				continue
+			}
+			if gap.W < smallestGapWidth || (gap.W == smallestGapWidth && gap.H > smallestGapHeight) {
+				cl.nextCandidate = i
+				smallestGapWidth = gap.W
+				smallestGapHeight = gap.H
+			}
 		}
-		if gap.W < smallestGapWidth {
-			cl.nextCandidate = i
-			smallestGapWidth = gap.W
-		}
-		if gap.W == smallestGapWidth {
-			//TODO what should happen in case of a tiebreak, highest gap first?
-			continue
-		}
+	} else {
+		cl.nextCandidate = len(cl.candidates) - 1
 	}
 }
 
 //TODO add argument to specify what rules should be used to search (BL, stack, smallest)
 func (cl *candidateList) nextGap() *gap {
-	return &cl.candidates[len(cl.candidates)-1]
+	return &cl.candidates[cl.nextCandidate]
 }
 
 func (cl *candidateList) removeNextGap() {
-	cl.candidates = cl.candidates[:len(cl.candidates)-1]
+	// cl.candidates = cl.candidates[:len(cl.candidates)-1]
+	cl.candidates = append(cl.candidates[:cl.nextCandidate], cl.candidates[cl.nextCandidate+1:]...)
 }
 
 //removeLatestCandidates removes the 1 or 2 candidates that were added last if they share a border with tile.
 func (cl *candidateList) removeLatestCandidates(tile *Tile) {
+	//TODO fix this to check all candidates instead of only last two, alternatively make a better way to link tiles to candidates
 	if len(cl.candidates) == 0 {
 		return
 	}
@@ -72,6 +81,11 @@ func (cl *candidateList) removeLatestCandidates(tile *Tile) {
 			cl.candidates = cl.candidates[:len(cl.candidates)-1]
 		}
 	}
+
+	// removedCandidates := 0
+	// for i := len(cl), cand := range cl.candidates { //TODO go through this in reverse order, to avoid skipping after delete
+	// 	//if isRightCandidate(cand, )
+	// }
 }
 
 func isRightCandidate(cand core.Coord, tile *Tile) bool {

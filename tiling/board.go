@@ -23,7 +23,7 @@ func NewBoard(boardDims core.Coord, tiles []Tile) Board {
 	// candidates := append(make([]core.Coord, 0), core.Coord{X: 0, Y: 0})
 	firstGap := gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y, leftH: boardDims.Y, active: true, leftSideActive: true}
 	// candidates := append(make([]gap, len(tiles))[:0], firstGap)
-	candidates := newCandidateList(len(tiles))
+	candidates := newCandidateList(len(tiles), smallestGapFirst)
 	candidates.addCandidate(firstGap)
 	board := make([][]uint8, boardDims.X)
 	gapTable, maxGapTable := buildGapTable(tiles, boardDims.X, boardDims.Y) //TODO make this a variable
@@ -487,13 +487,13 @@ func (b *Board) RemoveLastTile() {
 	if b.lastCollision != nil && b.lastCollision.Index == tile.Index {
 		b.lastCollision = nil
 	}
+	b.candidates.recalcNextCandidate()
 	tile.Remove()
 	b.Tiles = b.Tiles[:len(b.Tiles)-1]
 }
 
 func (b *Board) removeCandidates(tile Tile) {
 	b.candidates.removeLatestCandidates(&tile)
-	b.candidates.recalcNextCandidate()
 
 	// if len(b.candidates.candidates) == 0 {
 	// 	return

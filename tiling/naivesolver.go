@@ -1,6 +1,7 @@
 package tiling
 
 import (
+	"fmt"
 	"localhost/flobrm/tilingsolver/core"
 	"time"
 )
@@ -105,13 +106,13 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 
 	for {
-		// if step >= 0 && step%1000 == 0 { //&& step < 8500 {
-		// 	// fmt.Println("step: ", step)
-		// 	SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
-		// }
-		// if step >= 5000 {
-		// 	fmt.Println("start debugging here")
-		// }
+		if step >= 0 { //&& step%1000 == 0 { //&& step < 8500 {
+			// fmt.Println("step: ", step)
+			SaveBoardPic(board, fmt.Sprintf("%sdebugPic%010d.png", imgPath, step), 5)
+		}
+		if step >= 232 {
+			fmt.Println("start debugging here")
+		}
 		// if step == 6000 {
 		// 	return solutions, "interrupted", totalTilesPlaced, getCurrentPlacements(placedTileIndex, tiles, boardFlipped)
 		// }

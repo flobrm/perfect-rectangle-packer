@@ -66,26 +66,21 @@ func (cl *candidateList) removeNextGap() {
 
 //removeLatestCandidates removes the 1 or 2 candidates that were added last if they share a border with tile.
 func (cl *candidateList) removeLatestCandidates(tile *Tile) {
-	//TODO fix this to check all candidates instead of only last two, alternatively make a better way to link tiles to candidates
 	if len(cl.candidates) == 0 {
 		return
 	}
-	cand := cl.candidates[len(cl.candidates)-1].Pos
-	if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
-		cl.candidates = cl.candidates[:len(cl.candidates)-1]
-		if len(cl.candidates) == 0 {
-			return
-		}
-		cand = cl.candidates[len(cl.candidates)-1].Pos
-		if isRightCandidate(cand, tile) || isTopCandidate(cand, tile) {
-			cl.candidates = cl.candidates[:len(cl.candidates)-1]
+
+	removedCandidates := 0
+	for i := len(cl.candidates) - 1; i >= 0; i-- {
+		cand := cl.candidates[i]
+		if isRightCandidate(cand.Pos, tile) || isTopCandidate(cand.Pos, tile) {
+			cl.candidates = append(cl.candidates[:i], cl.candidates[i+1:]...)
+			removedCandidates++
+			if removedCandidates == 2 {
+				return
+			}
 		}
 	}
-
-	// removedCandidates := 0
-	// for i := len(cl), cand := range cl.candidates { //TODO go through this in reverse order, to avoid skipping after delete
-	// 	//if isRightCandidate(cand, )
-	// }
 }
 
 func isRightCandidate(cand core.Coord, tile *Tile) bool {

@@ -26,7 +26,7 @@ var imgPath = "C:/Users/Florian/go/src/localhost/flobrm/tilingsolver/img/"
 // returns a map with solutions, the reason for stopping, the number of steps taken,
 // and the tiles as placed on the board at the last step
 func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePlacement,
-	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool, optimizations map[int]bool) (
+	stop []core.TilePlacement, endTime time.Time, stopOnSolution bool, optimizations map[int]bool, placementOrder int) (
 	map[string]int, string, uint, []core.TilePlacement) {
 
 	checkGaps := optimizations[DoGapdetection]
@@ -54,7 +54,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		tiles[i] = NewTile(tileDims[i].X, tileDims[i].Y)
 		tiles[i].Index = i
 	}
-	board := NewBoard(boardDims, tiles)
+	board := NewBoard(boardDims, tiles, placementOrder)
 	// solutions := make([][]Tile, 0) //random starting value
 	solutions := make(map[string]int, 0)
 

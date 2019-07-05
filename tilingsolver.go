@@ -40,6 +40,7 @@ var allDownDetectionCheck = flag.Bool("all_down_gap_check", true, "check all nor
 var leftSideGapCheck = flag.Bool("left_side_gaps_check", true, "check gaps from the left side to the frame top")
 var totalGapAreaCheck = flag.Bool("total_gap_area_check", false, "check if the total gap area can be filled") //Turned of because it doesn't work or is never triggered
 var forceFrameUpright = flag.Bool("force_frame_upright", true, "Rotate the frame, start, and stop so the shortest frame side is used as the width.")
+var placementChoice = flag.String("placement_choice", "lastGapFound", "The algorithm determining the position of the next tile. [lastGapAdded (default), smallestGap, bottomLeft]")
 
 // File based multithreaded options
 var numSolvers = flag.Int("workers", 1, "number of worker threads")
@@ -49,6 +50,11 @@ var outputDir = flag.String("output_dir", "", "Directory where output should go"
 
 func main() {
 	flag.Parse()
+	//validate placementChoice:
+	if _, ok := tiling.PlacementOrder[*placementChoice]; !ok {
+		log.Fatal("Couldn't recognize placement_choice.")
+	}
+
 	//profiling cpu if cpuprofile is specified
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -95,12 +101,16 @@ func main() {
 		taskReader := tileio.NewPuzzleCSVReader(*jobsFile)
 		//TODO setup output stuff, for now print to output
 		//outputer
-		// solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers, optimizationFlags)
-		solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir, *numSolvers, optimizationFlags)
+		// solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir,
+		//*numSolvers, optimizationFlags, tiling.PlacementOrder[*placementChoice])
+		solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID,
+			*outputDir, *numSolvers, optimizationFlags, tiling.PlacementOrder[*placementChoice])
 	} else if *useJobs {
-		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, optimizationFlags)
+		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout,
+			*puzzleTimeout, *stopOnSolution, optimizationFlags, tiling.PlacementOrder[*placementChoice])
 	} else {
-		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, optimizationFlags)
+		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout,
+			*stopOnSolution, optimizationFlags, tiling.PlacementOrder[*placementChoice])
 	}
 	// fmt.Print(len(solveAsQas8()))
 	// fmt.Println(len(solveTestCase()))
@@ -123,7 +133,7 @@ func main() {
 }
 
 func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
-	processID string, outputDir string, workers int, optimizations map[int]bool) {
+	processID string, outputDir string, workers int, optimizations map[int]bool, placementOrder int) {
 	// parse options, determine endtime
 	puzzlesSolved := 0
 	activeWorkers := 0
@@ -152,7 +162,7 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 			break
 		}
 		go runWorker(finishedJobsChan, worker, solverID, puzzle, puzzleTimeout, processEndTime,
-			stopOnSolution, fileWriters[worker], optimizations)
+			stopOnSolution, fileWriters[worker], optimizations, placementOrder)
 		activeWorkers++
 	}
 
@@ -177,7 +187,7 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 					continue
 				}
 				go runWorker(finishedJobsChan, worker, solverID, puzzle, puzzleTimeout, processEndTime, stopOnSolution,
-					fileWriters[worker], optimizations)
+					fileWriters[worker], optimizations, placementOrder)
 				activeWorkers++
 				log.Println("Started puzzle ", puzzle.JobID, " on worker ", worker)
 
@@ -190,14 +200,14 @@ func solveConcurrentTasks(tasks tileio.PuzzleReader, solverID int, processTimeou
 }
 
 func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDescription, puzzleTimeout int, processEndTime time.Time,
-	stopOnSolution bool, resolutionWriter tileio.PuzzleResolutionWriter, optimizations map[int]bool) {
+	stopOnSolution bool, resolutionWriter tileio.PuzzleResolutionWriter, optimizations map[int]bool, placementOrder int) {
 	solveStart := time.Now()
 	solveEnd := solveStart.Add(time.Duration(1000000000 * int64(puzzleTimeout)))
 	if processEndTime.Before(solveEnd) {
 		solveEnd = processEndTime
 	}
 	solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start,
-		*puzzle.End, solveEnd, stopOnSolution, optimizations)
+		*puzzle.End, solveEnd, stopOnSolution, optimizations, placementOrder)
 	solveTime := time.Since(solveStart)
 	resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
 	resolutionWriter.SaveStatus(&puzzle, status, tilesPlaced, solveTime, solverID, &currentPlacement)
@@ -209,7 +219,7 @@ func runWorker(out chan int, workerID int, solverID int, puzzle tileio.PuzzleDes
 }
 
 func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puzzleTimeout int, stopOnSolution bool,
-	processID string, outputDir string, workers int, optimizationFlags map[int]bool) {
+	processID string, outputDir string, workers int, optimizationFlags map[int]bool, placementOrder int) {
 	log.Println("starting solveTasks", solverID, workers)
 	puzzlesSolved := 0
 	processEndTime := time.Now().Add(time.Duration(1000000000 * int64(processTimeout)))
@@ -236,7 +246,8 @@ func solveTasks(tasks tileio.PuzzleReader, solverID int, processTimeout int, puz
 		if processEndTime.Before(solveEnd) {
 			solveEnd = processEndTime
 		}
-		solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start, *puzzle.End, solveEnd, stopOnSolution, optimizationFlags)
+		solutions, status, tilesPlaced, currentPlacement := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, *puzzle.Start,
+			*puzzle.End, solveEnd, stopOnSolution, optimizationFlags, placementOrder)
 		solveTime := time.Since(solveStart)
 
 		resolutionWriter.SaveSolutions(puzzle.PuzzleID, puzzle.JobID, &solutions)
@@ -274,7 +285,8 @@ func solveTestCase() map[string]int {
 	tiles := make([]core.Coord, 11)
 	tileBytes := []byte("[{\"X\":22,\"Y\":14},{\"X\":20,\"Y\":6},{\"X\":20,\"Y\":3},{\"X\":20,\"Y\":2},{\"X\":17,\"Y\":1},{\"X\":15,\"Y\":11},{\"X\":14,\"Y\":13},{\"X\":10,\"Y\":5},{\"X\":7,\"Y\":6},{\"X\":7,\"Y\":5},{\"X\":6,\"Y\":1}]")
 	json.Unmarshal(tileBytes, &tiles)
-	result, _, _, _ := tiling.SolveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations())
+	result, _, _, _ := tiling.SolveNaive(board, tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)),
+		false, getDefaultOptimizations(), tiling.LastGapFirst)
 	return result
 }
 
@@ -284,7 +296,8 @@ func solveAsQas3() map[string]int {
 	for i := range tiles {
 		tiles[2-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, _, _ := tiling.SolveNaive(core.Coord{X: 5, Y: 4}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations())
+	result, _, _, _ := tiling.SolveNaive(core.Coord{X: 5, Y: 4}, tiles[:], nil, nil,
+		time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations(), tiling.LastGapFirst)
 	return result
 }
 
@@ -294,7 +307,8 @@ func solveAsQas8() map[string]int {
 	for i := range tiles {
 		tiles[7-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	result, _, steps, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations())
+	result, _, steps, _ := tiling.SolveNaive(core.Coord{X: 15, Y: 16}, tiles[:], nil, nil,
+		time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations(), tiling.LastGapFirst)
 	fmt.Println("steps", steps)
 	return result
 }
@@ -305,7 +319,8 @@ func solveAsQas20() map[string]int {
 	for i := range tiles {
 		tiles[19-i] = core.Coord{X: i + 2, Y: i + 1}
 	}
-	results, _, steps, _ := tiling.SolveNaive(core.Coord{X: 55, Y: 56}, tiles[:], nil, nil, time.Now().Add(time.Duration(1000000000*3600)), true, getDefaultOptimizations())
+	results, _, steps, _ := tiling.SolveNaive(core.Coord{X: 55, Y: 56}, tiles[:], nil, nil,
+		time.Now().Add(time.Duration(1000000000*3600)), true, getDefaultOptimizations(), tiling.LastGapFirst)
 	fmt.Println("steps", steps)
 	return results
 }
@@ -321,7 +336,8 @@ func solveFromFile(filePath *string) {
 	}
 
 	for puzzle, err := reader.NextPuzzle(); err == nil; puzzle, err = reader.NextPuzzle() {
-		solutions, _, _, _ := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, nil, nil, time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations())
+		solutions, _, _, _ := tiling.SolveNaive(puzzle.Board, *puzzle.Tiles, nil, nil,
+			time.Now().Add(time.Duration(1000000000*3600)), false, getDefaultOptimizations(), tiling.LastGapFirst)
 		log.Println("solved a puzzle")
 		for _, solution := range solutions {
 			//TODO write solutions
@@ -347,7 +363,7 @@ func bToMb(b uint64) uint64 {
 }
 
 func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int,
-	processTimeout int, puzzleTimeout int, stopOnSolution bool, optimizations map[int]bool) {
+	processTimeout int, puzzleTimeout int, stopOnSolution bool, optimizations map[int]bool, placementOrder int) {
 	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
@@ -373,7 +389,7 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 				solveEnd = processEndTime
 			}
 			solutions, status, tilesPlaced, _ := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, nil, nil, solveEnd,
-				stopOnSolution, optimizations)
+				stopOnSolution, optimizations, placementOrder)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving puzzle ", puzzle.ID, " in ", solveTime)
@@ -404,7 +420,7 @@ func solveFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize
 }
 
 func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batchSize int, solverID int,
-	processTimeout int, puzzleTimeout int, stopOnSolution bool, optimizations map[int]bool) {
+	processTimeout int, puzzleTimeout int, stopOnSolution bool, optimizations map[int]bool, placementOrder int) {
 	db := tileio.Open(dbstring)
 	defer tileio.Close(db)
 
@@ -426,7 +442,7 @@ func solveJobsFromDatabase(dbstring string, numTiles int, puzzleLimit int, batch
 				solveEnd = processEndTime
 			}
 			solutions, status, tilesPlaced, _ := tiling.SolveNaive(puzzle.BoardDims, *puzzle.Tiles, *puzzle.Start,
-				*puzzle.Stop, solveEnd, stopOnSolution, optimizations)
+				*puzzle.Stop, solveEnd, stopOnSolution, optimizations, placementOrder)
 			solveTime := time.Since(solveStart)
 
 			log.Println("finished solving job ", puzzle.JobID, " in ", solveTime)

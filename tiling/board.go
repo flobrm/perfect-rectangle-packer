@@ -18,10 +18,10 @@ type Board struct {
 }
 
 //NewBoard inits a board, including candidates
-func NewBoard(boardDims core.Coord, tiles []Tile) Board {
+func NewBoard(boardDims core.Coord, tiles []Tile, placementOrder int) Board {
 	myTiles := make([](*Tile), len(tiles))
 	firstGap := gap{Pos: core.Coord{}, W: boardDims.X, H: boardDims.Y, leftH: boardDims.Y, active: true, leftSideActive: true}
-	candidates := newCandidateList(len(tiles), lastGapFirst) //TODO add this as cmd option
+	candidates := newCandidateList(len(tiles), placementOrder)
 	candidates.addCandidate(firstGap)
 	board := make([][]uint8, boardDims.X)
 	gapTable, maxGapTable := buildGapTable(tiles, boardDims.X, boardDims.Y) //TODO make this a variable

@@ -130,7 +130,7 @@ func savePicture(picture image.Image, filePath string) {
 //TestVisualizer is a temporary test function to build this thang
 func TestVisualizer() {
 
-	board := NewBoard(core.Coord{X: 16, Y: 15}, make([]Tile, 8)[:0])
+	board := NewBoard(core.Coord{X: 16, Y: 15}, make([]Tile, 8)[:0], LastGapFirst)
 	tileA := NewTile(9, 8)
 	tileA.Place(core.Coord{X: 0, Y: 1}, false)
 	board.Place(&tileA, false, false)

@@ -8,10 +8,23 @@ type candidateList struct {
 	candidateOrder int
 }
 
+//This const identifies the different ways to place the next tile.
+//LastGapFirst always picks the latest added gap that is active
+//SmallestGapFirst picks the smallest active gap, using largest height to win a tie
+//BottomLeft picks the gap lowest in the frame, picking the leftmost gap in case of a tie.
 const (
-	lastGapFirst     = iota
-	smallestGapFirst = iota
+	LastGapFirst     = iota
+	SmallestGapFirst = iota
+	BottomLeft       = iota
 )
+
+//PlacementOrder is a const map mapping command strings to a placement order algorithm.
+//Currently supported options are lastGapAdded (default), smallestGap, bottomLeft
+var PlacementOrder = map[string]int{
+	"lastGapAdded": LastGapFirst,
+	"smalestGap":   SmallestGapFirst,
+	"bottomLeft":   BottomLeft,
+}
 
 //newCandidateList is an easy way to get a candidatelist
 func newCandidateList(maxCandidates int, candidateOrder int) candidateList {
@@ -36,7 +49,7 @@ func (cl *candidateList) addCandidate(candidate gap) {
 //The only available ruleset right now is last candidate added.
 func (cl *candidateList) recalcNextCandidate() {
 
-	if cl.candidateOrder == smallestGapFirst {
+	if cl.candidateOrder == SmallestGapFirst {
 		smallestGapWidth := 999999999999
 		smallestGapHeight := 999999999999
 		for i, gap := range cl.candidates {
@@ -47,6 +60,19 @@ func (cl *candidateList) recalcNextCandidate() {
 				cl.nextCandidate = i
 				smallestGapWidth = gap.W
 				smallestGapHeight = gap.H
+			}
+		}
+	} else if cl.candidateOrder == BottomLeft {
+		lowestGapY := 999999999999
+		lowestGapX := 999999999999
+		for i, gap := range cl.candidates {
+			if !gap.active {
+				continue
+			}
+			if gap.Pos.Y < lowestGapY || gap.Pos.Y == lowestGapY && gap.Pos.X < lowestGapX {
+				cl.nextCandidate = i
+				lowestGapX = gap.Pos.X
+				lowestGapY = gap.Pos.Y
 			}
 		}
 	} else {

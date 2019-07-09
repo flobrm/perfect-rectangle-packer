@@ -51,7 +51,7 @@ var outputDir = flag.String("output_dir", "", "Directory where output should go"
 func main() {
 	flag.Parse()
 	//validate placementChoice:
-	if _, ok := tiling.PlacementOrder[*placementChoice]; !ok {
+	if _, ok := tiling.PlacementOrderOptions[*placementChoice]; !ok {
 		log.Fatal("Couldn't recognize placement_choice.")
 	}
 
@@ -104,13 +104,13 @@ func main() {
 		// solveTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID, *outputDir,
 		//*numSolvers, optimizationFlags, tiling.PlacementOrder[*placementChoice])
 		solveConcurrentTasks(taskReader, *solverID, *processTimeout, *puzzleTimeout, *stopOnSolution, *processID,
-			*outputDir, *numSolvers, optimizationFlags, tiling.PlacementOrder[*placementChoice])
+			*outputDir, *numSolvers, optimizationFlags, tiling.PlacementOrderOptions[*placementChoice])
 	} else if *useJobs {
 		solveJobsFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout,
-			*puzzleTimeout, *stopOnSolution, optimizationFlags, tiling.PlacementOrder[*placementChoice])
+			*puzzleTimeout, *stopOnSolution, optimizationFlags, tiling.PlacementOrderOptions[*placementChoice])
 	} else {
 		solveFromDatabase(*dbstring, *numTiles, *puzzleLimit, *batchSize, *solverID, *processTimeout, *puzzleTimeout,
-			*stopOnSolution, optimizationFlags, tiling.PlacementOrder[*placementChoice])
+			*stopOnSolution, optimizationFlags, tiling.PlacementOrderOptions[*placementChoice])
 	}
 	// fmt.Print(len(solveAsQas8()))
 	// fmt.Println(len(solveTestCase()))

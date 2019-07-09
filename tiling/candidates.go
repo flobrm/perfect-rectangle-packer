@@ -18,11 +18,11 @@ const (
 	BottomLeft       = iota
 )
 
-//PlacementOrder is a const map mapping command strings to a placement order algorithm.
+//PlacementOrderOptions is a const map mapping command strings to a placement order algorithm.
 //Currently supported options are lastGapAdded (default), smallestGap, bottomLeft
-var PlacementOrder = map[string]int{
+var PlacementOrderOptions = map[string]int{
 	"lastGapAdded": LastGapFirst,
-	"smalestGap":   SmallestGapFirst,
+	"smallestGap":  SmallestGapFirst,
 	"bottomLeft":   BottomLeft,
 }
 

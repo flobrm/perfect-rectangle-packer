@@ -175,6 +175,10 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		placedThisRound := false //Is this still necessary? we break after placing a tile
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
+				// handle double tiles
+				if i > 0 && !tiles[i-1].Placed && tiles[i-1].X == tiles[i].X && tiles[i-1].Y == tiles[i].Y {
+					continue
+				}
 				// fmt.Println("trying to fit tile", tiles[i])
 				if startRotation == false && board.Place(&tiles[i], false, checkFullSSN) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
@@ -195,7 +199,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					}
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
-				if board.Place(&tiles[i], true, checkFullSSN) { // place turned
+				if tiles[i].X != tiles[i].Y && board.Place(&tiles[i], true, checkFullSSN) { // place turned, if tile is not square
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps, checkTotalGapArea) {

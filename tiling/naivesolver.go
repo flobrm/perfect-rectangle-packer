@@ -177,6 +177,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 			if !tiles[i].Placed {
 				// handle double tiles
 				if i > 0 && !tiles[i-1].Placed && tiles[i-1].X == tiles[i].X && tiles[i-1].Y == tiles[i].Y {
+					startRotation = false
 					continue
 				}
 				// fmt.Println("trying to fit tile", tiles[i])

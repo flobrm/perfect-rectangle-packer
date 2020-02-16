@@ -176,7 +176,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 		for i := startIndex; i < len(tiles); i++ {
 			if !tiles[i].Placed {
 				// handle double tiles
-				if i > 0 && !tiles[i-1].Placed && tiles[i-1].X == tiles[i].X && tiles[i-1].Y == tiles[i].Y {
+				if i > 0 && !tiles[i-1].Placed && tiles[i-1].W == tiles[i].W && tiles[i-1].H == tiles[i].H {
 					startRotation = false
 					continue
 				}
@@ -200,7 +200,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					}
 				}
 				// fmt.Println("trying to fit tile turned", tiles[i])
-				if tiles[i].X != tiles[i].Y && board.Place(&tiles[i], true, checkFullSSN) { // place turned, if tile is not square
+				if tiles[i].W != tiles[i].H && board.Place(&tiles[i], true, checkFullSSN) { // place turned, if tile is not square
 					// fmt.Println("fitting tile turned", tiles[i])
 					// fmt.Println("placed tile turned", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps, checkTotalGapArea) {

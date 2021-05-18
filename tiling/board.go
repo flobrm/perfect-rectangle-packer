@@ -179,10 +179,7 @@ type gap struct {
 //couldFit returns if a tile could fit in a gap. This assumes the tile is placed in the lower left corner
 // It doesn't check if the part of the tile above the gap collides with anything.
 func (g *gap) couldFit(tile *Tile) bool {
-	if tile.CurW <= g.W {
-		return true
-	}
-	return false
+	return tile.CurW <= g.W
 }
 
 func (b *Board) anyGapsUnfillable() bool {
@@ -303,10 +300,7 @@ func (b *Board) gapIsUnfillable(g *gap) bool {
 	for _, tile := range b.Tiles { // remove the areas of already placed tiles
 		maxArea -= b.gapTable[width][height][tile.Index]
 	}
-	if maxArea < targetArea {
-		return true
-	}
-	return false
+	return maxArea < targetArea
 }
 
 func (b *Board) leftSideGapIsUnfillable(g *gap) bool {
@@ -327,10 +321,7 @@ func (b *Board) leftSideGapIsUnfillable(g *gap) bool {
 	for _, tile := range b.Tiles { // remove the areas of already placed tiles
 		maxArea -= b.gapTable[width][height][tile.Index]
 	}
-	if maxArea < targetArea {
-		return true
-	}
-	return false
+	return maxArea < targetArea
 }
 
 func (b *Board) totalGapAreaTooBig() bool {
@@ -371,12 +362,7 @@ func (b *Board) totalGapAreaTooBig() bool {
 		maxArea -= b.gapTable[widestGap.W][widestGap.H][tile.Index]
 	}
 	//compare
-	if maxArea < widestGap.W*widestGap.H {
-		// fmt.Println("gap area too big")
-		return true
-	}
-
-	return false
+	return maxArea < widestGap.W*widestGap.H
 }
 
 //tileFitsBoard checks if the tile with it's internal rotation and position fits inside the board
@@ -463,15 +449,6 @@ func (b *Board) addCandidates(tile Tile) {
 		}
 	}
 	b.candidates.recalcNextCandidate()
-}
-
-func (b *Board) posCollides(pos core.Coord) (collides bool, collider *Tile) {
-	collides = b.board[pos.X][pos.Y] != 0
-	if collides {
-		collider = b.Tiles[b.board[pos.X][pos.Y]-1]
-		return collides, collider
-	}
-	return collides, collider
 }
 
 //RemoveLastTile removes a tile and resets it's candidate positions
@@ -578,7 +555,6 @@ func (b *Board) flipTilesHorizontally(tiles *[]Tile) *[]Tile {
 		// tile2.X = b.Size.X - tile2.X - tile2.CurW
 		(*tiles)[i].X = b.Size.X - (*tiles)[i].X - (*tiles)[i].CurW
 	}
-
 	return tiles
 }
 

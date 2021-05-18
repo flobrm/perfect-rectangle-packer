@@ -10,7 +10,7 @@ type candidateList struct {
 
 //This const identifies the different ways to place the next tile.
 //LastGapFirst always picks the latest added gap that is active
-//SmallestGapFirst picks the smallest active gap, using largest height to win a tie
+//SmallestGapFirst picks the smallest active gap, picking the gap with the largest height in case of a tie
 //BottomLeft picks the gap lowest in the frame, picking the leftmost gap in case of a tie.
 const (
 	LastGapFirst     = iota

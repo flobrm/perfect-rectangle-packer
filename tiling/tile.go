@@ -18,11 +18,6 @@ type Tile struct {
 	parent, lChild, rChild *Tile
 }
 
-// TilePair is a way to store two pairs, and keep track of them
-type TilePair struct {
-	a, b *Tile
-}
-
 //NewTile initializes tile
 func NewTile(w, h int) (t Tile) {
 	t.W = w
@@ -50,7 +45,6 @@ func (t *Tile) Place(spot core.Coord, turned bool) {
 		t.CurW = t.W
 		t.CurH = t.H
 	}
-
 }
 
 //Remove marks a tile as not placed
@@ -61,48 +55,10 @@ func (t *Tile) Remove() {
 //GetNeighborSpots returns the positions bottomright and topleft of the tile (in that order)
 func (t Tile) GetNeighborSpots() []core.Coord {
 	spots := [2]core.Coord{
-		core.Coord{X: t.X + t.CurW, Y: t.Y},
-		core.Coord{X: t.X, Y: t.Y + t.CurH}}
+		{X: t.X + t.CurW, Y: t.Y},
+		{X: t.X, Y: t.Y + t.CurH}}
 	return spots[:]
 }
-
-func (t *Tile) collides(b *Tile) bool {
-	if t.X >= b.X+b.CurW || b.X >= t.X+t.CurW {
-		return false
-	}
-	if t.Y >= b.Y+b.CurH || b.Y >= t.Y+t.CurH {
-		return false
-	}
-	return true
-}
-
-func (t *Tile) posCollides(pos *core.Coord) bool {
-	if pos.X < t.X || pos.X >= t.X+t.CurW {
-		return false
-	}
-	if pos.Y < t.Y || pos.Y >= t.Y+t.CurH {
-		return false
-	}
-	return true
-}
-
-// func (t *Tile) Equals(o *Tile) bool {
-// 	return t.W == o.W && t.H == o.H && t.X == o.X && t.Y == o.Y && t.Turned == o.Turned
-// }
-
-// type TileSliceSet struct {
-// 	slice [][]Tile
-// }
-
-// func (slice *[]Tile) Equals(other *[]Tile)
-
-// func (set *TileSliceSet) Add(tileSlice []Tile) {
-
-// }
-
-// func (set *TileSliceSet) Contains(tileSlice []Tile) bool {
-
-// }
 
 //TileSliceToJSON returns a JSON string encoding the width, height, and positioning data of a tile
 func TileSliceToJSON(tiles []Tile) string {

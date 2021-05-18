@@ -56,7 +56,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 	}
 	board := NewBoard(boardDims, tiles, placementOrder)
 	// solutions := make([][]Tile, 0) //random starting value
-	solutions := make(map[string]int, 0)
+	solutions := make(map[string]int)
 
 	// Only skip the last 3 start tiles if we have to use a separate tile for each corner
 	// aka only if the largest side of the largest tile is smaller than the smallest side of the board.
@@ -181,7 +181,7 @@ func SolveNaive(boardDims core.Coord, tileDims []core.Coord, start []core.TilePl
 					continue
 				}
 				// fmt.Println("trying to fit tile", tiles[i])
-				if startRotation == false && board.Place(&tiles[i], false, checkFullSSN) { //place normal
+				if !startRotation && board.Place(&tiles[i], false, checkFullSSN) { //place normal
 					// fmt.Println("fitting tile normal", tiles[i])
 					// fmt.Println("placed tile normal", board)
 					if checkGaps && board.HasUnfillableGaps(checkOnlyNextCandidate, checkLeftSideGaps, checkTotalGapArea) {

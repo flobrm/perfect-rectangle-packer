@@ -136,6 +136,4 @@ func TestVisualizer() {
 	board.Place(&tileA, false, false)
 
 	SaveBoardPic(board, "img/testpic.png", 10)
-
-	return
 }

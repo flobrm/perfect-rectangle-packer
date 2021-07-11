@@ -601,10 +601,15 @@ func (b *Board) updateNeighborsTree(tile *Tile) bool {
 						continue //already have a parent, can't add a new node
 					} else {
 						b.addTilePair(other, tileAddition)
-						break
+						break //It's correct that this is not a break 2. While we have assigned a parent
+						//it's still possible to find non-canonical pairs between newTile and its neighbors,
+						//so we should continue checking the next direction.
+
 					}
 				} else { //No pair, continue checking the other directions
 					break
+					//There could still a potential neigborpair between tileAddition and other.ancestor.
+					//TODO This should be a continue, not a break.
 				}
 			}
 		}

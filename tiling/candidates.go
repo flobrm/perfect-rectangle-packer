@@ -46,7 +46,6 @@ func (cl *candidateList) addCandidate(candidate gap) {
 }
 
 //recalcNextCandidate picks a new next candidate according to a specific ruleset
-//The only available ruleset right now is last candidate added.
 func (cl *candidateList) recalcNextCandidate() {
 
 	if cl.candidateOrder == SmallestGapFirst {
